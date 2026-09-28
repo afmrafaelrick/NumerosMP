@@ -10,12 +10,12 @@
 .app{max-width:1000px;margin:auto;min-height:100vh;background:rgba(255,255,255,.88);padding:18px;box-shadow:0 0 40px #7b61ff22}.top{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap}.title{margin:0;font-size:clamp(25px,4vw,42px)}
 button,.tool,input{font:inherit}.btn{border:2px solid #5b5bd6;background:white;border-radius:14px;padding:10px 16px;font-weight:800;cursor:pointer}.btn.primary{background:linear-gradient(135deg,#635bff,#9b5de5);color:#fff;border-color:#635bff}.btn:active{transform:translateY(1px)}
 .instructions{margin:8px 0 14px;color:#555}.toolbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:10px 0}.tool{border:2px solid #bbb;background:#fff;border-radius:12px;padding:8px 11px;cursor:pointer;font-weight:700}.tool.active{border-color:#635bff;background:#eeeaff;color:#4b3dcc}.swatch{width:28px;height:28px;border-radius:50%;border:2px solid #aaa;background:#3a86ff;display:inline-block}.range{width:120px}
-.boardWrap{position:relative;border:3px solid #8a7cff;border-radius:18px;overflow:hidden;background:#fff;min-height:620px;user-select:none;-webkit-user-select:none}.numbers{position:relative;display:grid;grid-template-columns:repeat(10,1fr);grid-auto-rows:58px;gap:0;padding:16px 18px 22px;min-height:620px}.num{display:flex;align-items:center;justify-content:center;font-weight:900;line-height:1;transform:translate(var(--dx),var(--dy)) rotate(var(--rot));font-size:var(--fs);white-space:nowrap;color:var(--num-color,#111);text-shadow:0 1px 0 #fff}.num:nth-child(7n){font-family:Georgia,serif}.num:nth-child(11n){font-weight:600}
-#draw{position:absolute;inset:0;width:100%;height:100%;z-index:3;touch-action:none;cursor:crosshair}.answer{display:flex;gap:10px;align-items:center;justify-content:center;flex-wrap:wrap;margin:18px 0 4px;font-size:clamp(18px,3vw,26px);font-weight:800}.answer input{width:105px;padding:9px;border:3px solid #222;border-radius:12px;text-align:center;font-size:28px;font-weight:900}.msg{text-align:center;min-height:34px;font-size:21px;font-weight:900;margin-top:8px}.ok{color:var(--ok)}.bad{color:var(--bad)}
+.boardWrap{position:relative;border:3px solid #8a7cff;border-radius:18px;overflow:hidden;background:#fff;min-height:640px;user-select:none;-webkit-user-select:none}.numbers{position:relative;padding:18px 18px 26px;min-height:640px;isolation:isolate}.num{position:absolute;left:var(--x,0px);top:var(--y,0px);font-size:var(--fs,32px);font-weight:900;line-height:1;white-space:nowrap;color:var(--num-color,#111);text-shadow:0 1px 0 #fff;transform:rotate(var(--rot,0deg));transform-origin:center center;z-index:var(--z,1);pointer-events:none;filter:drop-shadow(0 1px 0 rgba(255,255,255,.85))}.num:nth-child(7n){font-family:Georgia,serif}.num:nth-child(11n){font-weight:600}
+#draw{position:absolute;inset:0;width:100%;height:100%;z-index:20;touch-action:none;cursor:crosshair}.answer{display:flex;gap:10px;align-items:center;justify-content:center;flex-wrap:wrap;margin:18px 0 4px;font-size:clamp(18px,3vw,26px);font-weight:800}.answer input{width:105px;padding:9px;border:3px solid #222;border-radius:12px;text-align:center;font-size:28px;font-weight:900}.msg{text-align:center;min-height:34px;font-size:21px;font-weight:900;margin-top:8px}.ok{color:var(--ok)}.bad{color:var(--bad)}
 .status{font-size:13px;color:#666}.confetti{position:fixed;z-index:99;top:-20px;width:10px;height:16px;pointer-events:none;animation:fall var(--t) linear forwards;left:var(--x);transform:rotate(var(--r));background:var(--c)}@keyframes fall{to{transform:translate(var(--drift),110vh) rotate(900deg)}}
 .party{position:fixed;inset:0;z-index:90;display:none;place-items:center;pointer-events:none;background:rgba(255,255,255,.18)}.party.show{display:grid}.partyCard{font-size:clamp(38px,8vw,84px);font-weight:1000;text-align:center;text-shadow:0 3px 0 white;animation:pop .55s ease both}@keyframes pop{0%{transform:scale(.2) rotate(-8deg)}70%{transform:scale(1.16) rotate(3deg)}100%{transform:scale(1)}}
-@media(max-width:650px){.app{padding:10px}.boardWrap{min-height:720px}.numbers{grid-template-columns:repeat(7,1fr);grid-auto-rows:49px;padding:12px 8px;min-height:720px}.num{font-size:clamp(17px,var(--fs),35px)}.toolbar{justify-content:center}}
-@media print{body{background:#fff}.app{max-width:none}.top .btn,.toolbar,.answer,.instructions,.status{display:none}.boardWrap{border:1px solid #000}.numbers{min-height:900px;grid-auto-rows:80px}.num{color:#000!important}}
+@media(max-width:650px){.app{padding:10px}.boardWrap{min-height:760px}.numbers{min-height:760px;padding:12px 10px 18px}.toolbar{justify-content:center}}
+@media print{body{background:#fff}.app{max-width:none}.top .btn,.toolbar,.answer,.instructions,.status{display:none}.boardWrap{border:1px solid #000}.numbers{min-height:900px}.num{color:#000!important;filter:none!important}}
 </style>
 </head>
 <body>
@@ -23,11 +23,12 @@ button,.tool,input{font:inherit}.btn{border:2px solid #5b5bd6;background:white;b
   <div class="top"><div><h1 class="title">🔎 Qual número está faltando?</h1><div class="status" id="status">Clique em “Iniciar novo jogo”.</div></div><button class="btn primary" id="newGame">▶ Iniciar novo jogo</button></div>
   <div class="instructions">Há números de <b>1 a 100</b>, mas exatamente <b>um</b> está faltando. Vá riscando os que encontrar e, no final, digite sua resposta.</div>
   <div class="toolbar" aria-label="Ferramentas de desenho">
-    <b>Caneta:</b>
+    <b>Ferramenta:</b>
     <button class="tool active" data-brush="marker">Canetinha</button>
     <button class="tool" data-brush="brush">Pincel</button>
     <button class="tool" data-brush="chalk">Giz</button>
     <button class="tool" data-brush="pencil">Lápis</button>
+    <button class="tool" data-brush="eraser">🧽 Borracha</button>
     <label>Cor <input id="inkColor" type="color" value="#3a86ff" aria-label="Cor da caneta" style="width:34px;height:34px;border:0;background:transparent;padding:0"></label>
     <label>Espessura <input class="range" id="size" type="range" min="2" max="26" value="8"></label>
     <button class="btn" id="undo">↶ Desfazer</button><button class="btn" id="clear">🧽 Limpar riscos</button>
@@ -45,32 +46,102 @@ const guess=document.getElementById('guess'), check=document.getElementById('che
 let missing=null, brush='marker', drawing=false, current=[], strokes=[];
 function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
 function rand(min,max){return Math.random()*(max-min)+min}
+function clamp(v,min,max){return Math.max(min,Math.min(max,v))}
+function overlapArea(a,b){const x=Math.max(0,Math.min(a.x+a.w,b.x+b.w)-Math.max(a.x,b.x));const y=Math.max(0,Math.min(a.y+a.h,b.y+b.h)-Math.max(a.y,b.y));return x*y}
+function estimateSize(n,fs){const digits=String(n).length;const w=fs*(digits===1?.68:digits===2?1.2:1.72);return{w,h:fs*.95}}
+function layoutNumbers(){
+  const items=[...numsEl.querySelectorAll('.num')];
+  const w=numsEl.clientWidth, h=numsEl.clientHeight;
+  if(!items.length||!w||!h) return;
+
+  const cols=w<700?7:10;
+  const rows=Math.ceil(items.length/cols);
+  const cellW=w/cols, cellH=h/rows;
+  const anchors=[];
+
+  for(let r=0;r<rows;r++){
+    for(let c=0;c<cols;c++){
+      anchors.push({
+        x:c*cellW + cellW*0.5,
+        y:r*cellH + cellH*0.5
+      });
+    }
+  }
+  shuffle(anchors);
+
+  const bigSet = new Set(shuffle([...Array(items.length).keys()]).slice(0, Math.max(10, Math.floor(items.length*0.14))));
+  const mediumSet = new Set(shuffle([...Array(items.length).keys()]).slice(0, Math.max(22, Math.floor(items.length*0.30))));
+  const placed=[];
+
+  items.forEach((el,i)=>{
+    const n=+el.textContent;
+    let fs;
+    if(bigSet.has(i)) fs=Math.round(rand(w<700?44:50, w<700?72:88));
+    else if(mediumSet.has(i)) fs=Math.round(rand(w<700?30:34, w<700?54:62));
+    else fs=Math.round(rand(w<700?18:20, w<700?40:44));
+
+    if(String(n).length===3) fs=Math.round(fs*0.90);
+    const dims=estimateSize(n,fs);
+    const anchor=anchors[i % anchors.length] || {x:w/2,y:h/2};
+    let best=null;
+
+    for(let t=0;t<220;t++){
+      const x=clamp(anchor.x - dims.w/2 + rand(-cellW*0.38, cellW*0.38), 0, Math.max(0,w-dims.w));
+      const y=clamp(anchor.y - dims.h/2 + rand(-cellH*0.34, cellH*0.34), 0, Math.max(0,h-dims.h));
+      const rect={x,y,w:dims.w,h:dims.h};
+      let overlapScore=0;
+      let collisions=0;
+      for(const p of placed){
+        const hit=overlapArea(rect,p);
+        if(hit>0){
+          collisions++;
+          overlapScore += hit / Math.min(rect.w*rect.h,p.w*p.h);
+        }
+      }
+      const drift = Math.abs((x + dims.w/2) - anchor.x)/cellW + Math.abs((y + dims.h/2) - anchor.y)/cellH;
+      const score = overlapScore*1.7 + collisions*0.07 + drift*0.08;
+      if(!best || score < best.score) best={x,y,score};
+      if(score < 0.18) break;
+    }
+
+    const x=best?best.x:anchor.x-dims.w/2;
+    const y=best?best.y:anchor.y-dims.h/2;
+    const rot=`${rand(-18,18).toFixed(1)}deg`;
+    el.style.setProperty('--fs',`${fs}px`);
+    el.style.setProperty('--x',`${Math.round(x)}px`);
+    el.style.setProperty('--y',`${Math.round(y)}px`);
+    el.style.setProperty('--rot',rot);
+    el.style.setProperty('--z',String(Math.floor(rand(1,10))));
+    placed.push({x,y,w:dims.w,h:dims.h});
+  });
+}
 function newGame(){
   missing=Math.floor(Math.random()*100)+1;
   const arr=Array.from({length:100},(_,i)=>i+1).filter(n=>n!==missing);
   if(arr.length!==99 || new Set(arr).size!==99 || arr.includes(missing)) throw new Error('Falha de validação do jogo');
   shuffle(arr); numsEl.innerHTML='';
-  arr.forEach((n,i)=>{const d=document.createElement('div');d.className='num';d.textContent=n;d.dataset.value=n;d.style.setProperty('--fs',`${Math.round(rand(20,43))}px`);d.style.setProperty('--dx',`${Math.round(rand(-9,9))}px`);d.style.setProperty('--dy',`${Math.round(rand(-7,7))}px`);d.style.setProperty('--rot',`${rand(-8,8).toFixed(1)}deg`);const colors=['#e63946','#3a86ff','#2a9d55','#9b5de5','#f77f00','#d97706','#008c95','#e83e8c'];d.style.setProperty('--num-color',colors[Math.floor(Math.random()*colors.length)]);numsEl.appendChild(d)});
+  arr.forEach((n)=>{const d=document.createElement('div');d.className='num';d.textContent=n;d.dataset.value=n;const colors=['#e63946','#3a86ff','#2a9d55','#9b5de5','#f77f00','#d97706','#008c95','#e83e8c'];d.style.setProperty('--num-color',colors[Math.floor(Math.random()*colors.length)]);numsEl.appendChild(d)});
   // segunda barreira anti-erro: valida o DOM realmente exibido
   const shown=[...numsEl.querySelectorAll('.num')].map(x=>+x.textContent);
   if(shown.length!==99 || new Set(shown).size!==99 || shown.some(n=>n<1||n>100) || shown.includes(missing)) return newGame();
-  clearCanvas(); guess.value='';guess.disabled=false;check.disabled=false;msg.textContent='';msg.className='msg';status.textContent='Jogo pronto: 99 números únicos na tela e 1 faltando.'; resizeCanvas();
+  layoutNumbers();
+  clearCanvas(); guess.value='';guess.disabled=false;check.disabled=false;msg.textContent='';msg.className='msg';status.textContent='Jogo pronto: 99 números únicos na tela, espalhados de forma mais natural, com alguns maiores e um pouco sobrepostos, e 1 faltando.'; resizeCanvas();
 }
 function resizeCanvas(){const r=canvas.getBoundingClientRect(), ratio=window.devicePixelRatio||1;const old=strokes.slice();canvas.width=Math.round(r.width*ratio);canvas.height=Math.round(r.height*ratio);ctx.setTransform(ratio,0,0,ratio,0,0);redraw(old)}
 function point(e){const r=canvas.getBoundingClientRect();return{x:e.clientX-r.left,y:e.clientY-r.top}}
-function styleFor(b){const base=+document.getElementById('size').value;if(b==='brush')return{w:base*1.7,a:.88,dash:[],cap:'round'};if(b==='chalk')return{w:base*1.35,a:.45,dash:[2,3],cap:'butt'};if(b==='pencil')return{w:Math.max(2,base*.45),a:.75,dash:[],cap:'round'};return{w:base,a:.58,dash:[],cap:'round'}}
-function drawStroke(s){if(s.pts.length<2)return;ctx.save();ctx.globalAlpha=s.style.a;ctx.strokeStyle=s.color||'#3a86ff';ctx.lineWidth=s.style.w;ctx.lineCap=s.style.cap;ctx.lineJoin='round';ctx.setLineDash(s.style.dash);ctx.beginPath();ctx.moveTo(s.pts[0].x,s.pts[0].y);for(let i=1;i<s.pts.length;i++)ctx.lineTo(s.pts[i].x,s.pts[i].y);ctx.stroke();ctx.restore()}
+function styleFor(b){const base=+document.getElementById('size').value;if(b==='eraser')return{w:Math.max(10,base*2.2),a:1,dash:[],cap:'round',erase:true};if(b==='brush')return{w:base*1.7,a:.88,dash:[],cap:'round'};if(b==='chalk')return{w:base*1.35,a:.45,dash:[2,3],cap:'butt'};if(b==='pencil')return{w:Math.max(2,base*.45),a:.75,dash:[],cap:'round'};return{w:base,a:.58,dash:[],cap:'round'}}
+function drawStroke(s){if(s.pts.length<2)return;ctx.save();if(s.style.erase){ctx.globalCompositeOperation='destination-out';ctx.globalAlpha=1;ctx.strokeStyle='#000'}else{ctx.globalCompositeOperation='source-over';ctx.globalAlpha=s.style.a;ctx.strokeStyle=s.color||'#3a86ff'}ctx.lineWidth=s.style.w;ctx.lineCap=s.style.cap;ctx.lineJoin='round';ctx.setLineDash(s.style.dash);ctx.beginPath();ctx.moveTo(s.pts[0].x,s.pts[0].y);for(let i=1;i<s.pts.length;i++)ctx.lineTo(s.pts[i].x,s.pts[i].y);ctx.stroke();ctx.restore()}
 function redraw(list=strokes){ctx.clearRect(0,0,canvas.clientWidth,canvas.clientHeight);list.forEach(drawStroke)}
 function clearCanvas(){strokes=[];current=[];ctx.clearRect(0,0,canvas.width,canvas.height)}
 canvas.addEventListener('pointerdown',e=>{if(missing===null)return;drawing=true;canvas.setPointerCapture(e.pointerId);current=[point(e)]});
 canvas.addEventListener('pointermove',e=>{if(!drawing)return;current.push(point(e));redraw();drawStroke({pts:current,style:styleFor(brush),color:document.getElementById('inkColor').value})});
 canvas.addEventListener('pointerup',()=>{if(!drawing)return;drawing=false;if(current.length>1)strokes.push({pts:current.slice(),style:styleFor(brush),color:document.getElementById('inkColor').value});current=[];redraw()});
 canvas.addEventListener('pointercancel',()=>{drawing=false;current=[];redraw()});
-document.querySelectorAll('[data-brush]').forEach(b=>b.onclick=()=>{document.querySelectorAll('[data-brush]').forEach(x=>x.classList.remove('active'));b.classList.add('active');brush=b.dataset.brush});
+document.querySelectorAll('[data-brush]').forEach(b=>b.onclick=()=>{document.querySelectorAll('[data-brush]').forEach(x=>x.classList.remove('active'));b.classList.add('active');brush=b.dataset.brush;canvas.style.cursor=brush==='eraser'?'cell':'crosshair'});
 document.getElementById('undo').onclick=()=>{strokes.pop();redraw()};document.getElementById('clear').onclick=clearCanvas;document.getElementById('newGame').onclick=newGame;
 function celebrate(){party.classList.add('show');const colors=['#ff3b30','#ffcc00','#34c759','#007aff','#af52de','#ff9500'];for(let i=0;i<120;i++){const c=document.createElement('i');c.className='confetti';c.style.setProperty('--x',Math.random()*100+'vw');c.style.setProperty('--drift',(Math.random()*220-110)+'px');c.style.setProperty('--r',Math.random()*360+'deg');c.style.setProperty('--t',(1.8+Math.random()*2)+'s');c.style.setProperty('--c',colors[i%colors.length]);document.body.appendChild(c);setTimeout(()=>c.remove(),4200)}setTimeout(()=>party.classList.remove('show'),2200)}
 function verify(){const v=Number(guess.value);if(!Number.isInteger(v)||v<1||v>100){msg.textContent='Digite um número de 1 a 100.';msg.className='msg bad';return}if(v===missing){msg.textContent=`Isso! O número ${missing} estava faltando!`;msg.className='msg ok';check.disabled=true;guess.disabled=true;celebrate()}else{msg.textContent='Ainda não! Continue procurando e riscando. 🙂';msg.className='msg bad';guess.select()}}
-check.onclick=verify;guess.addEventListener('keydown',e=>{if(e.key==='Enter')verify()});window.addEventListener('resize',()=>requestAnimationFrame(resizeCanvas));
+check.onclick=verify;guess.addEventListener('keydown',e=>{if(e.key==='Enter')verify()});window.addEventListener('resize',()=>requestAnimationFrame(()=>{layoutNumbers();resizeCanvas()}));
 resizeCanvas();
 })();
 </script>
