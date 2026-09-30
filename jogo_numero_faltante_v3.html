@@ -1,0 +1,761 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
+<title>Qual número está faltando?</title>
+<style>
+:root{
+  --ink:#24304a;--accent:#635bff;--ok:#1f9d61;--bad:#e0445e;
+  --pink:#ff5fa2;--yellow:#ffca3a;--blue:#3a86ff;--green:#55c271;
+  --purple:#9b5de5;--orange:#ff8c42;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  margin:0;
+  background:linear-gradient(135deg,#fff1f7,#eef7ff 45%,#fff8dc);
+  color:var(--ink);
+  font-family:ui-rounded,"Arial Rounded MT Bold",system-ui,-apple-system,sans-serif;
+  touch-action:manipulation;
+}
+.app{
+  max-width:900px;
+  margin:auto;
+  min-height:100vh;
+  background:rgba(255,255,255,.9);
+  padding:12px;
+  box-shadow:0 0 32px #7b61ff22;
+}
+.top{
+  display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap
+}
+.title{margin:0;font-size:clamp(23px,3.6vw,36px)}
+.status{font-size:12px;color:#666;max-width:620px}
+button,.tool,input{font:inherit}
+.btn{
+  border:2px solid #5b5bd6;background:white;border-radius:12px;
+  padding:8px 12px;font-weight:800;cursor:pointer
+}
+.btn.primary{
+  background:linear-gradient(135deg,#635bff,#9b5de5);
+  color:#fff;border-color:#635bff
+}
+.btn:active,.tool:active,.modeBtn:active{transform:translateY(1px)}
+.instructions{
+  margin:7px 0 8px;color:#555;font-size:14px;line-height:1.35
+}
+.modeChooser{
+  display:flex;gap:8px;align-items:center;flex-wrap:wrap;
+  margin:8px 0 9px;padding:7px;border-radius:14px;background:#f4f1ff;
+}
+.modeChooser b{font-size:13px}
+.modeBtn{
+  border:2px solid #c9c2ff;background:#fff;border-radius:11px;
+  padding:7px 10px;font-weight:900;cursor:pointer;color:#4d4690
+}
+.modeBtn.active{
+  border-color:#635bff;background:#635bff;color:#fff;
+  box-shadow:0 3px 10px #635bff33
+}
+.toolbar{
+  display:flex;align-items:center;gap:6px;flex-wrap:wrap;
+  margin:7px 0;font-size:13px
+}
+.tool{
+  border:2px solid #bbb;background:#fff;border-radius:10px;
+  padding:6px 8px;cursor:pointer;font-weight:700
+}
+.tool.active{border-color:#635bff;background:#eeeaff;color:#4b3dcc}
+.range{width:100px}
+.drawControls[hidden]{display:none!important}
+
+.boardWrap{
+  position:relative;border:3px solid #8a7cff;border-radius:16px;
+  overflow:hidden;background:#fff;
+  height:clamp(420px,55svh,530px);
+  user-select:none;-webkit-user-select:none;
+}
+.numbers{
+  position:relative;
+  width:100%;height:100%;
+  padding:10px;
+  isolation:isolate;
+}
+.num{
+  position:absolute;
+  left:var(--x,0px);top:var(--y,0px);
+  font-size:var(--fs,28px);
+  font-weight:900;line-height:1;white-space:nowrap;
+  color:var(--num-color,#111);
+  text-shadow:0 1px 0 #fff;
+  transform:rotate(var(--rot,0deg));
+  transform-origin:center center;
+  z-index:var(--z,1);
+  pointer-events:none;
+  filter:drop-shadow(0 1px 0 rgba(255,255,255,.85));
+  transition:filter .15s ease,opacity .15s ease;
+}
+.num:nth-child(7n){font-family:Georgia,serif}
+.num:nth-child(11n){font-weight:600}
+
+.mode-explode .num{
+  pointer-events:auto;
+  cursor:pointer;
+  touch-action:manipulation;
+}
+.mode-explode #draw{pointer-events:none}
+.mode-draw .num{pointer-events:none}
+
+.num.exploding{
+  animation:numberPop .40s cubic-bezier(.2,.8,.25,1) forwards;
+  pointer-events:none!important;
+}
+@keyframes numberPop{
+  0%{transform:rotate(var(--rot,0deg)) scale(1);opacity:1}
+  38%{transform:rotate(calc(var(--rot,0deg) + 7deg)) scale(1.42);opacity:1}
+  100%{transform:rotate(calc(var(--rot,0deg) - 18deg)) scale(.08);opacity:0}
+}
+.burst{
+  position:absolute;z-index:30;pointer-events:none;
+  width:8px;height:8px;border-radius:50%;
+  left:var(--bx);top:var(--by);
+  background:var(--bc);
+  animation:burst .46s ease-out forwards;
+}
+@keyframes burst{
+  from{transform:translate(-50%,-50%) scale(1);opacity:1}
+  to{transform:translate(calc(-50% + var(--dx)),calc(-50% + var(--dy))) scale(.25);opacity:0}
+}
+
+#draw{
+  position:absolute;inset:0;width:100%;height:100%;z-index:20;
+  touch-action:none;cursor:crosshair
+}
+.answer{
+  display:flex;gap:8px;align-items:center;justify-content:center;
+  flex-wrap:wrap;margin:12px 0 2px;
+  font-size:clamp(16px,2.6vw,22px);font-weight:800
+}
+.answer input{
+  width:88px;padding:7px;border:3px solid #222;border-radius:11px;
+  text-align:center;font-size:24px;font-weight:900
+}
+.msg{
+  text-align:center;min-height:28px;font-size:18px;
+  font-weight:900;margin-top:5px
+}
+.ok{color:var(--ok)}.bad{color:var(--bad)}
+.confetti{
+  position:fixed;z-index:99;top:-20px;width:10px;height:16px;
+  pointer-events:none;animation:fall var(--t) linear forwards;
+  left:var(--x);transform:rotate(var(--r));background:var(--c)
+}
+@keyframes fall{to{transform:translate(var(--drift),110vh) rotate(900deg)}}
+.party{
+  position:fixed;inset:0;z-index:90;display:none;place-items:center;
+  pointer-events:none;background:rgba(255,255,255,.18)
+}
+.party.show{display:grid}
+.partyCard{
+  font-size:clamp(38px,8vw,80px);font-weight:1000;text-align:center;
+  text-shadow:0 3px 0 white;animation:pop .55s ease both
+}
+@keyframes pop{
+  0%{transform:scale(.2) rotate(-8deg)}
+  70%{transform:scale(1.16) rotate(3deg)}
+  100%{transform:scale(1)}
+}
+
+@media(max-width:720px){
+  .app{padding:8px}
+  .title{font-size:clamp(21px,6vw,29px)}
+  .top .btn{padding:7px 10px;font-size:13px}
+  .instructions{font-size:13px}
+  .modeChooser{gap:5px;margin:6px 0}
+  .modeBtn{padding:6px 8px;font-size:12px}
+  .toolbar{justify-content:center;gap:5px}
+  .tool{padding:5px 7px;font-size:12px}
+  .boardWrap{height:clamp(390px,52svh,460px)}
+  .answer{margin-top:10px;font-size:16px}
+}
+@media(max-width:430px){
+  .boardWrap{height:clamp(375px,50svh,430px)}
+  .range{width:82px}
+  .toolbar label{font-size:12px}
+}
+</style>
+</head>
+<body>
+<div class="app mode-explode" id="app">
+  <div class="top">
+    <div>
+      <h1 class="title">🔎 Qual número está faltando?</h1>
+      <div class="status" id="status">Escolha o modo e clique em “Iniciar novo jogo”.</div>
+    </div>
+    <button class="btn primary" id="newGame">▶ Iniciar novo jogo</button>
+  </div>
+
+  <div class="instructions" id="instructions">
+    Clique nos números em <b>ordem crescente</b>. Eles vão explodir e desaparecer.
+    Quando a sequência travar porque um número não existe, digite qual está faltando.
+  </div>
+
+  <div class="modeChooser" aria-label="Modo de jogo">
+    <b>Modo:</b>
+    <button class="modeBtn active" data-mode="explode">💥 Explodir em ordem</button>
+    <button class="modeBtn" data-mode="draw">✏️ Riscar números</button>
+  </div>
+
+  <div class="drawControls" id="drawControls" hidden>
+    <div class="toolbar" aria-label="Ferramentas de desenho">
+      <b>Ferramenta:</b>
+      <button class="tool active" data-brush="marker">Canetinha</button>
+      <button class="tool" data-brush="brush">Pincel</button>
+      <button class="tool" data-brush="chalk">Giz</button>
+      <button class="tool" data-brush="pencil">Lápis</button>
+      <button class="tool" data-brush="eraser">🧽 Borracha</button>
+      <label>Cor <input id="inkColor" type="color" value="#3a86ff" aria-label="Cor da caneta" style="width:30px;height:30px;border:0;background:transparent;padding:0"></label>
+      <label>Esp. <input class="range" id="size" type="range" min="2" max="26" value="8"></label>
+      <button class="btn" id="undo">↶ Desfazer</button>
+    </div>
+  </div>
+
+  <div class="boardWrap" id="boardWrap">
+    <div class="numbers" id="numbers"></div>
+    <canvas id="draw"></canvas>
+  </div>
+
+  <div class="answer">
+    <label for="guess">O número que está faltando é:</label>
+    <input id="guess" inputmode="numeric" pattern="[0-9]*" maxlength="3" placeholder="?" disabled>
+    <button class="btn primary" id="check" disabled>Conferir</button>
+  </div>
+  <div class="msg" id="msg"></div>
+</div>
+
+<div class="party" id="party">
+  <div class="partyCard">🎉 ACERTOU! 🎉<br><span style="font-size:.45em">Muito bem!</span></div>
+</div>
+
+<script>
+(()=>{
+'use strict';
+
+const app=document.getElementById('app');
+const numsEl=document.getElementById('numbers');
+const boardWrap=document.getElementById('boardWrap');
+const canvas=document.getElementById('draw');
+const ctx=canvas.getContext('2d');
+const guess=document.getElementById('guess');
+const check=document.getElementById('check');
+const msg=document.getElementById('msg');
+const status=document.getElementById('status');
+const party=document.getElementById('party');
+const instructions=document.getElementById('instructions');
+const drawControls=document.getElementById('drawControls');
+
+let missing=null;
+let gameMode='explode';
+let nextToExplode=1;
+let brush='marker';
+let drawing=false;
+let current=[];
+let strokes=[];
+let lastBoardWidth=0,lastBoardHeight=0,lastCanvasCssWidth=0,lastCanvasCssHeight=0;
+let resizeTimer=null;
+
+function shuffle(a){
+  for(let i=a.length-1;i>0;i--){
+    const j=Math.floor(Math.random()*(i+1));
+    [a[i],a[j]]=[a[j],a[i]];
+  }
+  return a;
+}
+function rand(min,max){return Math.random()*(max-min)+min}
+function clamp(v,min,max){return Math.max(min,Math.min(max,v))}
+function overlapArea(a,b){
+  const x=Math.max(0,Math.min(a.x+a.w,b.x+b.w)-Math.max(a.x,b.x));
+  const y=Math.max(0,Math.min(a.y+a.h,b.y+b.h)-Math.max(a.y,b.y));
+  return x*y;
+}
+function estimateSize(n,fs){
+  const digits=String(n).length;
+  const w=fs*(digits===1?.68:digits===2?1.2:1.72);
+  return{w,h:fs*.95};
+}
+function rectInsideBoard(el,boardRect,margin=4){
+  const r=el.getBoundingClientRect();
+  return r.left>=boardRect.left+margin && r.top>=boardRect.top+margin &&
+         r.right<=boardRect.right-margin && r.bottom<=boardRect.bottom-margin;
+}
+function visibleRatioFor(index,items,rects){
+  const el=items[index], r=rects[index];
+  const zi=Number(getComputedStyle(el).zIndex)||0;
+  const cols=7, rows=7;
+  let visible=0,total=0;
+  for(let yy=1;yy<=rows;yy++){
+    for(let xx=1;xx<=cols;xx++){
+      const px=r.left+(xx/(cols+1))*r.width;
+      const py=r.top +(yy/(rows+1))*r.height;
+      total++;
+      let covered=false;
+      for(let j=0;j<items.length;j++){
+        if(j===index) continue;
+        const zj=Number(getComputedStyle(items[j]).zIndex)||0;
+        const above=zj>zi || (zj===zi && j>index);
+        if(!above) continue;
+        const o=rects[j];
+        if(px>=o.left&&px<=o.right&&py>=o.top&&py<=o.bottom){covered=true;break;}
+      }
+      if(!covered) visible++;
+    }
+  }
+  return visible/total;
+}
+function overlapStats(rects){
+  let pairs=0,strongPairs=0,maxNorm=0;
+  for(let i=0;i<rects.length;i++){
+    for(let j=i+1;j<rects.length;j++){
+      const hit=overlapArea(rects[i],rects[j]);
+      if(hit<=0) continue;
+      const norm=hit/Math.min(rects[i].w*rects[i].h,rects[j].w*rects[j].h);
+      if(norm>0.015){
+        pairs++;
+        maxNorm=Math.max(maxNorm,norm);
+        if(norm>0.10) strongPairs++;
+      }
+    }
+  }
+  return{pairs,strongPairs,maxNorm};
+}
+function validateVisualLayout(){
+  const items=[...numsEl.querySelectorAll('.num:not(.exploding)')];
+  if(items.length!==99) return{ok:false,reason:'count'};
+  const vals=items.map(el=>Number(el.textContent));
+  if(new Set(vals).size!==99 || vals.includes(missing)) return{ok:false,reason:'values'};
+
+  const board=numsEl.getBoundingClientRect();
+  const rects=items.map(el=>el.getBoundingClientRect());
+  for(let i=0;i<items.length;i++){
+    if(!rectInsideBoard(items[i],board,4)) return{ok:false,reason:'clipped',index:i};
+    if(visibleRatioFor(i,items,rects)<0.45) return{ok:false,reason:'covered',index:i};
+  }
+  const stats=overlapStats(rects);
+  if(stats.pairs<7) return{ok:false,reason:'too-separated',stats};
+  if(stats.strongPairs<2) return{ok:false,reason:'not-messy-enough',stats};
+  if(stats.maxNorm>0.54) return{ok:false,reason:'too-much-overlap',stats};
+  return{ok:true,stats};
+}
+function makeLayoutAttempt(tightness=1){
+  const items=[...numsEl.querySelectorAll('.num')];
+  const w=numsEl.clientWidth,h=numsEl.clientHeight;
+  if(!items.length||!w||!h) return false;
+
+  const areaScale=clamp(Math.sqrt((w*h)/(900*530)),.72,1);
+  const cols=w<650?7:w<820?9:10;
+  const rows=Math.ceil(items.length/cols);
+  const cellW=w/cols,cellH=h/rows;
+  const anchors=[];
+  for(let r=0;r<rows;r++){
+    for(let c=0;c<cols;c++) anchors.push({x:c*cellW+cellW*.5,y:r*cellH+cellH*.5});
+  }
+  shuffle(anchors);
+
+  const indices=[...Array(items.length).keys()];
+  const giantSet=new Set(shuffle(indices.slice()).slice(0,Math.max(4,Math.floor(items.length*.055))));
+  const bigSet=new Set(shuffle(indices.slice()).slice(0,Math.max(12,Math.floor(items.length*.16))));
+  const mediumSet=new Set(shuffle(indices.slice()).slice(0,Math.max(28,Math.floor(items.length*.34))));
+  const placed=[];
+
+  items.forEach((el,i)=>{
+    const n=+el.textContent;
+    let fs,desiredOverlap,desiredCollisions;
+    if(giantSet.has(i)){
+      fs=rand(54,92);desiredOverlap=.15;desiredCollisions=2.2;
+    }else if(bigSet.has(i)){
+      fs=rand(41,70);desiredOverlap=.10;desiredCollisions=1.6;
+    }else if(mediumSet.has(i)){
+      fs=rand(27,53);desiredOverlap=.055;desiredCollisions=1.0;
+    }else{
+      fs=rand(16,38);desiredOverlap=.018;desiredCollisions=.4;
+    }
+    fs=Math.max(13,Math.round(fs*areaScale*tightness));
+    if(String(n).length===3) fs=Math.round(fs*.86);
+
+    const dims=estimateSize(n,fs);
+    const anchor=anchors[i%anchors.length]||{x:w/2,y:h/2};
+    let best=null;
+
+    for(let t=0;t<220;t++){
+      const x=clamp(anchor.x-dims.w/2+rand(-cellW*.42,cellW*.42),5,Math.max(5,w-dims.w-5));
+      const y=clamp(anchor.y-dims.h/2+rand(-cellH*.38,cellH*.38),5,Math.max(5,h-dims.h-5));
+      const rect={x,y,w:dims.w,h:dims.h};
+      let overlapScore=0,collisions=0,maxNorm=0;
+
+      for(const q of placed){
+        const hit=overlapArea(rect,q);
+        if(hit>0){
+          const norm=hit/Math.min(rect.w*rect.h,q.w*q.h);
+          if(norm>0.015){
+            collisions++;
+            overlapScore+=norm;
+            maxNorm=Math.max(maxNorm,norm);
+          }
+        }
+      }
+
+      const drift=Math.abs((x+dims.w/2)-anchor.x)/cellW+
+                  Math.abs((y+dims.h/2)-anchor.y)/cellH;
+      const score=
+        Math.abs(overlapScore-desiredOverlap)*1.4+
+        Math.abs(collisions-desiredCollisions)*.08+
+        Math.max(0,maxNorm-.40)*2.2+
+        drift*.05;
+
+      if(!best||score<best.score) best={x,y,score};
+      if(score<.11) break;
+    }
+
+    const x=best?best.x:5,y=best?best.y:5;
+    el.style.setProperty('--fs',`${fs}px`);
+    el.style.setProperty('--x',`${Math.round(x)}px`);
+    el.style.setProperty('--y',`${Math.round(y)}px`);
+    el.style.setProperty('--rot',`${rand(-18,18).toFixed(1)}deg`);
+    el.style.setProperty('--z',String(Math.floor(rand(1,11))));
+    placed.push({x,y,w:dims.w,h:dims.h});
+  });
+  return true;
+}
+function layoutNumbers(){
+  for(let attempt=0;attempt<36;attempt++){
+    const tightness=attempt<12?1.02:attempt<24?.97:attempt<32?.92:.88;
+    makeLayoutAttempt(tightness);
+    const result=validateVisualLayout();
+    if(result.ok){
+      numsEl.dataset.layoutValidated='true';
+      numsEl.dataset.layoutAttempts=String(attempt+1);
+      numsEl.dataset.overlapPairs=String(result.stats?.pairs||0);
+      return true;
+    }
+  }
+  makeLayoutAttempt(.84);
+  const finalCheck=validateVisualLayout();
+  numsEl.dataset.layoutValidated=String(finalCheck.ok);
+  numsEl.dataset.layoutAttempts='37';
+  numsEl.dataset.overlapPairs=String(finalCheck.stats?.pairs||0);
+  return finalCheck.ok;
+}
+
+function updateModeUI(){
+  app.classList.toggle('mode-explode',gameMode==='explode');
+  app.classList.toggle('mode-draw',gameMode==='draw');
+  drawControls.hidden=gameMode!=='draw';
+
+  document.querySelectorAll('[data-mode]').forEach(b=>{
+    b.classList.toggle('active',b.dataset.mode===gameMode);
+  });
+
+  if(gameMode==='explode'){
+    instructions.innerHTML='Clique nos números em <b>ordem crescente</b>. Eles vão explodir e desaparecer. Quando a sequência travar porque um número não existe, digite qual está faltando.';
+    canvas.style.cursor='default';
+  }else{
+    instructions.innerHTML='Há números de <b>1 a 100</b>, mas exatamente <b>um</b> está faltando. Vá riscando os que encontrar e, no final, digite sua resposta.';
+    canvas.style.cursor=brush==='eraser'?'cell':'crosshair';
+  }
+}
+function createNumbers(){
+  const arr=Array.from({length:100},(_,i)=>i+1).filter(n=>n!==missing);
+  if(arr.length!==99 || new Set(arr).size!==99 || arr.includes(missing)){
+    throw new Error('Falha de validação do jogo');
+  }
+  shuffle(arr);
+  numsEl.innerHTML='';
+  arr.forEach(n=>{
+    const d=document.createElement('div');
+    d.className='num';
+    d.textContent=n;
+    d.dataset.value=n;
+    const colors=['#e63946','#3a86ff','#2a9d55','#9b5de5','#f77f00','#d97706','#008c95','#e83e8c'];
+    d.style.setProperty('--num-color',colors[Math.floor(Math.random()*colors.length)]);
+    numsEl.appendChild(d);
+  });
+
+  const shown=[...numsEl.querySelectorAll('.num')].map(x=>+x.textContent);
+  if(shown.length!==99||new Set(shown).size!==99||shown.some(n=>n<1||n>100)||shown.includes(missing)){
+    return false;
+  }
+  return true;
+}
+function newGame(){
+  missing=Math.floor(Math.random()*100)+1;
+  nextToExplode=1;
+  clearCanvas();
+  msg.textContent='';
+  msg.className='msg';
+  guess.value='';
+  guess.disabled=false;
+  check.disabled=false;
+
+  if(!createNumbers()) return newGame();
+  const visualOK=layoutNumbers();
+
+  lastBoardWidth=numsEl.clientWidth;
+  lastBoardHeight=numsEl.clientHeight;
+  resizeCanvas(false);
+
+  status.textContent=visualOK
+    ? `Jogo pronto: 99 números únicos e visíveis, 1 faltando.`
+    : 'Jogo pronto: os 99 números estão corretos.';
+}
+
+function makeBurstAt(el){
+  const board=boardWrap.getBoundingClientRect();
+  const r=el.getBoundingClientRect();
+  const cx=r.left-board.left+r.width/2;
+  const cy=r.top-board.top+r.height/2;
+  const colors=['#ff3b30','#ffcc00','#34c759','#007aff','#af52de','#ff9500'];
+  for(let i=0;i<10;i++){
+    const p=document.createElement('i');
+    p.className='burst';
+    p.style.setProperty('--bx',`${cx}px`);
+    p.style.setProperty('--by',`${cy}px`);
+    p.style.setProperty('--dx',`${rand(-45,45)}px`);
+    p.style.setProperty('--dy',`${rand(-45,45)}px`);
+    p.style.setProperty('--bc',colors[i%colors.length]);
+    boardWrap.appendChild(p);
+    setTimeout(()=>p.remove(),520);
+  }
+}
+numsEl.addEventListener('click',e=>{
+  if(gameMode!=='explode'||missing===null) return;
+  const el=e.target.closest('.num');
+  if(!el||el.classList.contains('exploded')||el.classList.contains('exploding')) return;
+  const value=Number(el.dataset.value);
+  if(value!==nextToExplode) return;
+
+  el.classList.add('exploding');
+  makeBurstAt(el);
+  setTimeout(()=>{
+    el.classList.remove('exploding');
+    el.classList.add('exploded');
+    el.style.visibility='hidden';
+  },390);
+
+  nextToExplode++;
+  while(nextToExplode===missing){
+    // O próximo número esperado é justamente o faltante.
+    // A sequência fica naturalmente "travada": números maiores não respondem.
+    break;
+  }
+});
+
+function resizeCanvas(scaleStrokes=false){
+  const r=canvas.getBoundingClientRect();
+  const cssW=r.width,cssH=r.height,ratio=window.devicePixelRatio||1;
+  if(!cssW||!cssH) return;
+
+  const sameSize=Math.abs(cssW-lastCanvasCssWidth)<.5&&Math.abs(cssH-lastCanvasCssHeight)<.5;
+  const sameBacking=canvas.width===Math.round(cssW*ratio)&&canvas.height===Math.round(cssH*ratio);
+  if(sameSize&&sameBacking) return;
+
+  if(scaleStrokes&&lastCanvasCssWidth>0&&lastCanvasCssHeight>0){
+    const sx=cssW/lastCanvasCssWidth,sy=cssH/lastCanvasCssHeight;
+    strokes.forEach(s=>s.pts.forEach(p=>{p.x*=sx;p.y*=sy}));
+    current.forEach(p=>{p.x*=sx;p.y*=sy});
+  }
+
+  canvas.width=Math.round(cssW*ratio);
+  canvas.height=Math.round(cssH*ratio);
+  ctx.setTransform(ratio,0,0,ratio,0,0);
+  lastCanvasCssWidth=cssW;
+  lastCanvasCssHeight=cssH;
+  redraw();
+}
+function scaleExistingLayout(oldW,oldH,newW,newH){
+  if(!oldW||!oldH||!newW||!newH||missing===null) return;
+  const sx=newW/oldW,sy=newH/oldH,fontScale=Math.min(sx,sy);
+  [...numsEl.querySelectorAll('.num')].forEach(el=>{
+    const x=parseFloat(el.style.getPropertyValue('--x'))||0;
+    const y=parseFloat(el.style.getPropertyValue('--y'))||0;
+    const fs=parseFloat(el.style.getPropertyValue('--fs'))||28;
+    const nextFs=Math.max(12,fs*fontScale);
+    const dims=estimateSize(Number(el.textContent),nextFs);
+    const nx=clamp(x*sx,5,Math.max(5,newW-dims.w-5));
+    const ny=clamp(y*sy,5,Math.max(5,newH-dims.h-5));
+    el.style.setProperty('--x',`${nx.toFixed(1)}px`);
+    el.style.setProperty('--y',`${ny.toFixed(1)}px`);
+    el.style.setProperty('--fs',`${nextFs.toFixed(1)}px`);
+  });
+}
+function handleRealResize(){
+  const w=numsEl.clientWidth,h=numsEl.clientHeight;
+  if(!w||!h) return;
+
+  if(!lastBoardWidth||!lastBoardHeight){
+    lastBoardWidth=w;lastBoardHeight=h;resizeCanvas(false);return;
+  }
+
+  const widthChanged=Math.abs(w-lastBoardWidth)>24;
+  const heightChanged=Math.abs(h-lastBoardHeight)>24;
+
+  if(widthChanged||heightChanged){
+    const oldW=lastBoardWidth,oldH=lastBoardHeight;
+    lastBoardWidth=w;lastBoardHeight=h;
+    scaleExistingLayout(oldW,oldH,w,h);
+    resizeCanvas(true);
+  }else{
+    resizeCanvas(false);
+  }
+}
+
+function point(e){
+  const r=canvas.getBoundingClientRect();
+  return{x:e.clientX-r.left,y:e.clientY-r.top};
+}
+function styleFor(b){
+  const base=+document.getElementById('size').value;
+  if(b==='eraser')return{w:Math.max(10,base*2.2),a:1,dash:[],cap:'round',erase:true};
+  if(b==='brush')return{w:base*1.7,a:.88,dash:[],cap:'round'};
+  if(b==='chalk')return{w:base*1.35,a:.45,dash:[2,3],cap:'butt'};
+  if(b==='pencil')return{w:Math.max(2,base*.45),a:.75,dash:[],cap:'round'};
+  return{w:base,a:.58,dash:[],cap:'round'};
+}
+function drawStroke(s){
+  if(s.pts.length<2)return;
+  ctx.save();
+  if(s.style.erase){
+    ctx.globalCompositeOperation='destination-out';
+    ctx.globalAlpha=1;ctx.strokeStyle='#000';
+  }else{
+    ctx.globalCompositeOperation='source-over';
+    ctx.globalAlpha=s.style.a;
+    ctx.strokeStyle=s.color||'#3a86ff';
+  }
+  ctx.lineWidth=s.style.w;
+  ctx.lineCap=s.style.cap;
+  ctx.lineJoin='round';
+  ctx.setLineDash(s.style.dash);
+  ctx.beginPath();
+  ctx.moveTo(s.pts[0].x,s.pts[0].y);
+  for(let i=1;i<s.pts.length;i++)ctx.lineTo(s.pts[i].x,s.pts[i].y);
+  ctx.stroke();
+  ctx.restore();
+}
+function redraw(list=strokes){
+  ctx.clearRect(0,0,canvas.clientWidth,canvas.clientHeight);
+  list.forEach(drawStroke);
+}
+function clearCanvas(){
+  strokes=[];current=[];
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+}
+
+canvas.addEventListener('pointerdown',e=>{
+  if(gameMode!=='draw'||missing===null)return;
+  drawing=true;
+  canvas.setPointerCapture(e.pointerId);
+  current=[point(e)];
+});
+canvas.addEventListener('pointermove',e=>{
+  if(!drawing||gameMode!=='draw')return;
+  current.push(point(e));
+  redraw();
+  drawStroke({pts:current,style:styleFor(brush),color:document.getElementById('inkColor').value});
+});
+canvas.addEventListener('pointerup',()=>{
+  if(!drawing)return;
+  drawing=false;
+  if(current.length>1){
+    strokes.push({
+      pts:current.slice(),
+      style:styleFor(brush),
+      color:document.getElementById('inkColor').value
+    });
+  }
+  current=[];
+  redraw();
+});
+canvas.addEventListener('pointercancel',()=>{
+  drawing=false;current=[];redraw();
+});
+
+document.querySelectorAll('[data-brush]').forEach(b=>{
+  b.onclick=()=>{
+    document.querySelectorAll('[data-brush]').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active');
+    brush=b.dataset.brush;
+    if(gameMode==='draw') canvas.style.cursor=brush==='eraser'?'cell':'crosshair';
+  };
+});
+document.getElementById('undo').onclick=()=>{strokes.pop();redraw()};
+
+document.querySelectorAll('[data-mode]').forEach(b=>{
+  b.onclick=()=>{
+    const newMode=b.dataset.mode;
+    if(newMode===gameMode)return;
+    gameMode=newMode;
+    updateModeUI();
+    if(missing!==null) newGame();
+  };
+});
+
+document.getElementById('newGame').onclick=newGame;
+
+function celebrate(){
+  party.classList.add('show');
+  const colors=['#ff3b30','#ffcc00','#34c759','#007aff','#af52de','#ff9500'];
+  for(let i=0;i<120;i++){
+    const c=document.createElement('i');
+    c.className='confetti';
+    c.style.setProperty('--x',Math.random()*100+'vw');
+    c.style.setProperty('--drift',(Math.random()*220-110)+'px');
+    c.style.setProperty('--r',Math.random()*360+'deg');
+    c.style.setProperty('--t',(1.8+Math.random()*2)+'s');
+    c.style.setProperty('--c',colors[i%colors.length]);
+    document.body.appendChild(c);
+    setTimeout(()=>c.remove(),4200);
+  }
+  setTimeout(()=>party.classList.remove('show'),2200);
+}
+function verify(){
+  const v=Number(guess.value);
+  if(!Number.isInteger(v)||v<1||v>100){
+    msg.textContent='Digite um número de 1 a 100.';
+    msg.className='msg bad';
+    return;
+  }
+  if(v===missing){
+    msg.textContent=`Isso! O número ${missing} estava faltando!`;
+    msg.className='msg ok';
+    check.disabled=true;
+    guess.disabled=true;
+    celebrate();
+  }else{
+    msg.textContent=gameMode==='explode'
+      ? 'Ainda não! Continue clicando nos números em ordem. 🙂'
+      : 'Ainda não! Continue procurando e riscando. 🙂';
+    msg.className='msg bad';
+    guess.select();
+  }
+}
+check.onclick=verify;
+guess.addEventListener('keydown',e=>{if(e.key==='Enter')verify()});
+
+window.addEventListener('resize',()=>{
+  clearTimeout(resizeTimer);
+  resizeTimer=setTimeout(()=>requestAnimationFrame(handleRealResize),140);
+},{passive:true});
+window.addEventListener('orientationchange',()=>{
+  clearTimeout(resizeTimer);
+  resizeTimer=setTimeout(()=>requestAnimationFrame(handleRealResize),300);
+},{passive:true});
+
+lastBoardWidth=numsEl.clientWidth;
+lastBoardHeight=numsEl.clientHeight;
+updateModeUI();
+resizeCanvas(false);
+})();
+</script>
+</body>
+</html>
