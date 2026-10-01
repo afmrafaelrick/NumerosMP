@@ -52,7 +52,13 @@
   .cell{position:relative;aspect-ratio:1/1;border:0;background:var(--bg,#ddd);padding:0;margin:0;cursor:pointer;display:grid;place-items:center;overflow:hidden;isolation:isolate;font-size:clamp(12px,calc(190px / var(--n)),34px);font-weight:900}
   .cell::after{content:"";position:absolute;inset:0;border-top:1px solid var(--line);border-left:1px solid var(--line);z-index:1;pointer-events:none}
   .cell.boundary-top::after{border-top:3px solid var(--strong-line)}
-  .cell.boundary-left::after{border-left:3px solid var(--strong-line)}
+  .cell.boundary-left::after{border-left:3px solid #f4eddf}
+  .cell.boundary-top::after{border-top:3px solid #f4eddf}
+  .cell.boundary-right{border-right:3px solid #f4eddf}
+  .cell.boundary-bottom{border-bottom:3px solid #f4eddf}
+  .cell.terrain-0{box-shadow:inset 0 3px 0 rgba(255,255,255,.16),inset 0 -2px 0 rgba(80,60,40,.06)}
+  .cell.terrain-1{box-shadow:inset 0 5px 0 rgba(255,255,255,.24),inset 0 -3px 0 rgba(80,60,40,.10)}
+  .cell.terrain-2{box-shadow:inset 0 7px 0 rgba(255,255,255,.30),inset 0 -4px 0 rgba(80,60,40,.13)}
   .cell:hover{filter:brightness(1.035)}
   .cell:focus-visible{outline:3px solid #334b6f;outline-offset:-3px;z-index:9}
   .cell .mark{position:relative;z-index:4;display:grid;place-items:center;width:78%;height:78%;border-radius:50%;transition:.15s ease;transform:scale(.94)}
@@ -68,7 +74,7 @@
   .spinner{width:34px;height:34px;border:4px solid rgba(70,63,54,.16);border-top-color:#5f6f57;border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 10px}
   @keyframes spin{to{transform:rotate(360deg)}}
 
-  .status-strip{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px}
+  .status-strip{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:10px}
   .stat{background:rgba(255,255,255,.58);border:1px solid rgba(70,60,48,.08);border-radius:12px;padding:9px 8px;text-align:center}
   .stat strong{display:block;font-size:17px}
   .stat span{font-size:11px;color:var(--muted);font-weight:700}
@@ -79,7 +85,9 @@
   .dino-list{display:grid;gap:6px}
   .dino{display:grid;grid-template-columns:14px 30px minmax(0,1fr);gap:8px;align-items:center;padding:7px 8px;border-radius:10px;background:rgba(255,255,255,.48);font-size:12px;font-weight:800;transition:.2s ease}
   .dino .swatch{width:14px;height:14px;border-radius:50%;box-shadow:inset 0 0 0 1px rgba(50,45,38,.12)}
-  .dino .icon{font-size:19px;filter:grayscale(1);opacity:.36;text-align:center}
+  .dino .icon{font-size:17px;filter:grayscale(1);opacity:.38;text-align:center;display:grid;place-items:center;line-height:1}
+  .species-icon{display:inline-grid;place-items:center;min-width:27px;height:27px;border-radius:9px;background:rgba(255,255,255,.55);font-size:9px;font-weight:950;letter-spacing:-.04em;border:1px solid rgba(70,60,48,.12)}
+  .found .species-icon{background:rgba(255,255,255,.9);font-size:10px}
   .dino.found .icon{filter:none;opacity:1}
   .dino.found{background:rgba(255,255,255,.78);text-decoration:none}
   .dino.found .name::after{content:"  ✓";color:#59724f}
@@ -167,6 +175,7 @@
         <div class="stat"><strong id="foundCount">0/5</strong><span>encontrados</span></div>
         <div class="stat"><strong id="errorCount">0</strong><span>erros</span></div>
         <div class="stat"><strong id="markCount">0</strong><span>marcados vazios</span></div>
+        <div class="stat"><strong id="timerCount">00:00</strong><span id="timerLabel">tempo</span></div>
       </div>
     </section>
 
@@ -210,18 +219,18 @@
   ];
 
   const DINOS = [
-    {name:'Tiranossauro Rex', icon:'🦖'},
-    {name:'Tricerátops', icon:'🦕'},
-    {name:'Estegossauro', icon:'🦕'},
-    {name:'Braquiossauro', icon:'🦕'},
-    {name:'Velociraptor', icon:'🦖'},
-    {name:'Anquilossauro', icon:'🦕'},
-    {name:'Espinossauro', icon:'🦖'},
-    {name:'Parasaurolophus', icon:'🦕'},
-    {name:'Diplodoco', icon:'🦕'},
-    {name:'Carnotauro', icon:'🦖'},
-    {name:'Paquicefalossauro', icon:'🦕'},
-    {name:'Iguanodonte', icon:'🦕'}
+    {name:'Tiranossauro Rex', icon:'🦖', tag:'T-REX'},
+    {name:'Tricerátops', icon:'🦕', tag:'TRI'},
+    {name:'Estegossauro', icon:'🦕', tag:'STE'},
+    {name:'Braquiossauro', icon:'🦕', tag:'BRA'},
+    {name:'Velociraptor', icon:'🦖', tag:'RAP'},
+    {name:'Espinossauro', icon:'🦖', tag:'SPI'},
+    {name:'Anquilossauro', icon:'🦕', tag:'ANK'},
+    {name:'Parasaurolophus', icon:'🦕', tag:'PAR'},
+    {name:'Diplodoco', icon:'🦕', tag:'DIP'},
+    {name:'Carnotauro', icon:'🦖', tag:'CAR'},
+    {name:'Paquicefalossauro', icon:'🦕', tag:'PAC'},
+    {name:'Iguanodonte', icon:'🦕', tag:'IGU'}
   ];
 
   const boardEl = document.getElementById('board');
@@ -230,6 +239,8 @@
   const foundCount = document.getElementById('foundCount');
   const errorCount = document.getElementById('errorCount');
   const markCount = document.getElementById('markCount');
+  const timerCount = document.getElementById('timerCount');
+  const timerLabel = document.getElementById('timerLabel');
   const toastEl = document.getElementById('toast');
   const winModal = document.getElementById('winModal');
   const winText = document.getElementById('winText');
@@ -239,6 +250,11 @@
   let tool = 'search';
   let game = null;
   let toastTimer = null;
+  let timerId = null, startedAt = 0, elapsedMs = 0;
+  function fmtTime(ms){ const sec=Math.floor(ms/1000), m=Math.floor(sec/60), s=sec%60; return `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`; }
+  function stopTimer(){ if(timerId){clearInterval(timerId);timerId=null;} if(startedAt) elapsedMs=Date.now()-startedAt; }
+  function startTimer(){ if(timerId) clearInterval(timerId); startedAt=Date.now(); elapsedMs=0; timerCount.textContent='00:00'; timerLabel.textContent='tempo'; timerId=setInterval(()=>{elapsedMs=Date.now()-startedAt;timerCount.textContent=fmtTime(elapsedMs)},250); }
+  function saveBest(){ stopTimer(); const key=`dinoBest_${game.n}`; const prev=Number(localStorage.getItem(key)||0); if(!prev||elapsedMs<prev)localStorage.setItem(key,String(elapsedMs)); return Number(localStorage.getItem(key)||elapsedMs); }
 
   function shuffle(arr){
     const a = arr.slice();
@@ -505,7 +521,7 @@
     for(let rid=0;rid<game.n;rid++){
       const item = document.createElement('div');
       item.className = 'dino' + (game.foundRegions.has(rid) ? ' found' : '');
-      item.innerHTML = `<span class="swatch" style="background:${PALETTE[rid]}"></span><span class="icon">${DINOS[rid].icon}</span><span class="name">${DINOS[rid].name}</span>`;
+      item.innerHTML = `<span class="swatch" style="background:${PALETTE[rid]}"></span><span class="icon"><span class="species-icon">${DINOS[rid].tag}</span></span><span class="name">${DINOS[rid].name}</span>`;
       dinoList.appendChild(item);
     }
   }
@@ -520,10 +536,13 @@
         const b = document.createElement('button');
         b.className = 'cell';
         b.style.setProperty('--bg',PALETTE[rid]);
+        b.classList.add('terrain-'+(rid%3));
         b.setAttribute('role','gridcell');
         b.setAttribute('aria-label',`Linha ${r+1}, coluna ${c+1}, região ${DINOS[rid].name}`);
         if(r===0 || game.regions[r-1][c]!==rid) b.classList.add('boundary-top');
         if(c===0 || game.regions[r][c-1]!==rid) b.classList.add('boundary-left');
+        if(c===game.n-1 || game.regions[r][c+1]!==rid) b.classList.add('boundary-right');
+        if(r===game.n-1 || game.regions[r+1][c]!==rid) b.classList.add('boundary-bottom');
 
         const s = game.cellState[idx(r,c)];
         const mark = document.createElement('span');
@@ -536,7 +555,7 @@
           mark.textContent='✕';
         }else if(s==='found'){
           b.classList.add('dug','found');
-          mark.textContent=DINOS[rid].icon;
+          mark.innerHTML=`<span class="species-icon">${DINOS[rid].tag}</span>`;
         }
         b.appendChild(mark);
         b.addEventListener('click',()=>handleCell(r,c));
@@ -610,9 +629,9 @@
       updateStats();
       if(game.foundRegions.size === game.n){
         setTimeout(()=>{
-          winText.textContent = game.errors === 0
-            ? 'Você encontrou todos sem nenhuma escavação errada.'
-            : `Você encontrou todos os ${game.n} dinossauros com ${game.errors} ${game.errors===1?'erro':'erros'}.`;
+          const best=saveBest();
+          const base = game.errors === 0 ? 'Você encontrou todos sem nenhuma escavação errada.' : `Você encontrou todos os ${game.n} dinossauros com ${game.errors} ${game.errors===1?'erro':'erros'}.`;
+          winText.textContent = `${base} Tempo: ${fmtTime(elapsedMs)} • Recorde neste nível: ${fmtTime(best)}.`;
           winModal.classList.add('show');
         },350);
       }
@@ -627,6 +646,7 @@
 
   async function startGame(){
     winModal.classList.remove('show');
+    stopTimer();
     overlay.classList.add('show');
     logicBadge.textContent = 'Validando lógica…';
     await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
@@ -644,6 +664,7 @@
     renderRoster();
     updateStats();
     overlay.classList.remove('show');
+    startTimer();
   }
 
   document.querySelectorAll('[data-level]').forEach(btn=>{
