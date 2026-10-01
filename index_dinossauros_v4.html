@@ -1,0 +1,715 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#efe7d6" />
+<title>Caça aos Dinossauros — V4</title>
+<style>
+  :root{
+    --ink:#3f3a34;
+    --muted:#746d63;
+    --paper:#f6f0e4;
+    --paper-2:#eee3d0;
+    --panel:rgba(255,255,255,.62);
+    --line:rgba(67,59,49,.22);
+    --strong-line:rgba(57,49,41,.58);
+    --accent:#6e7d62;
+    --accent-2:#a66a56;
+    --danger:#b94b4b;
+    --shadow:0 12px 30px rgba(67,51,33,.10);
+    --radius:20px;
+  }
+
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;min-height:100%;background:
+    radial-gradient(circle at 15% 0%, rgba(255,255,255,.75), transparent 30%),
+    linear-gradient(180deg,#f4eddf 0%,#ebe0cc 100%);color:var(--ink);font-family:Inter,ui-rounded,"SF Pro Rounded","Segoe UI",system-ui,sans-serif}
+  body{min-height:100svh;padding:env(safe-area-inset-top) max(12px,env(safe-area-inset-right)) max(18px,env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left));}
+  button{font:inherit;color:inherit}
+
+  .app{width:min(100%,900px);margin:0 auto;padding:18px 0 28px}
+  .hero{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:14px}
+  .hero h1{font-size:clamp(26px,5vw,42px);line-height:1;margin:0 0 7px;letter-spacing:-.035em}
+  .hero p{margin:0;color:var(--muted);font-size:14px}
+  .badge{flex:none;background:rgba(255,255,255,.58);border:1px solid rgba(255,255,255,.78);box-shadow:var(--shadow);border-radius:999px;padding:9px 12px;font-size:12px;font-weight:800;color:#5f6758;white-space:nowrap}
+
+  .panel{background:var(--panel);border:1px solid rgba(255,255,255,.74);border-radius:var(--radius);box-shadow:var(--shadow);backdrop-filter:blur(10px)}
+  .controls{padding:12px;display:grid;gap:10px;margin-bottom:12px}
+  .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .row-label{font-size:12px;font-weight:900;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-right:2px}
+  .choice,.tool,.new-game{border:1px solid rgba(65,58,49,.16);background:rgba(255,255,255,.68);border-radius:13px;padding:10px 13px;font-weight:800;cursor:pointer;transition:.16s ease;min-height:42px}
+  .choice:hover,.tool:hover,.new-game:hover{transform:translateY(-1px);background:#fff}
+  .choice.active,.tool.active{background:#525b4b;color:#fff;border-color:#525b4b;box-shadow:0 6px 14px rgba(68,79,60,.18)}
+  .new-game{margin-left:auto;background:#eadbc3}
+  .hint-row{border-top:1px solid rgba(65,58,49,.10);padding-top:10px}
+  .hint-btn{margin-left:auto;background:#fff3c9;border-color:#d8c58a;white-space:nowrap}
+
+  .game-layout{display:grid;grid-template-columns:minmax(0,1fr) 230px;gap:12px;align-items:start}
+  .board-card{padding:12px;min-width:0}
+  .board-wrap{position:relative;width:100%;max-width:680px;margin:0 auto}
+  .board{--n:5;width:100%;display:grid;grid-template-columns:repeat(var(--n),1fr);border:3px solid var(--strong-line);border-radius:14px;overflow:hidden;background:#d7c8ad;touch-action:manipulation;user-select:none}
+  .cell{position:relative;aspect-ratio:1/1;border:0;background:var(--bg,#ddd);padding:0;margin:0;cursor:pointer;display:grid;place-items:center;overflow:hidden;isolation:isolate;font-size:clamp(12px,calc(190px / var(--n)),34px);font-weight:900}
+  .cell::after{content:"";position:absolute;inset:0;border-top:1px solid rgba(71,61,48,.15);border-left:1px solid rgba(71,61,48,.15);z-index:1;pointer-events:none}
+  /* Bordas de região viram “penhascos”: topo iluminado + face de terra escura. */
+  .cell.boundary-top{border-top:3px solid rgba(255,255,255,.50)}
+  .cell.boundary-left{border-left:3px solid rgba(255,255,255,.38)}
+  .cell.boundary-right{border-right:6px solid rgba(92,70,47,.34)}
+  .cell.boundary-bottom{border-bottom:7px solid rgba(92,70,47,.42)}
+  .cell.boundary-right::before,.cell.boundary-bottom::before{content:"";position:absolute;z-index:2;pointer-events:none}
+  .cell.boundary-right::before{right:0;top:0;bottom:0;width:5px;background:linear-gradient(90deg,rgba(255,255,255,.08),rgba(73,51,32,.30))}
+  .cell.boundary-bottom::before{left:0;right:0;bottom:0;height:6px;background:linear-gradient(180deg,rgba(255,255,255,.06),rgba(73,51,32,.38));box-shadow:inset 0 2px 0 rgba(66,46,29,.10)}
+  .cell.terrain-0{filter:brightness(1.015)}
+  .cell.terrain-1{filter:brightness(.975)}
+  .cell.terrain-2{filter:brightness(.935)}
+  .cell:hover{filter:brightness(1.035)}
+  .cell:focus-visible{outline:3px solid #334b6f;outline-offset:-3px;z-index:9}
+  .cell .mark{position:relative;z-index:4;display:grid;place-items:center;width:78%;height:78%;border-radius:50%;transition:.15s ease;transform:scale(.94)}
+  .cell.dug .mark{background:radial-gradient(circle at 44% 38%,#7f5f3d 0 34%,#6f4e31 35% 58%,#5c3f29 59% 100%);box-shadow:inset 0 0 0 3px rgba(53,34,20,.10),0 1px 5px rgba(62,43,28,.28);transform:scale(1)}
+  .cell.manual-empty .mark{color:#26221d;font-size:.78em;text-shadow:0 1px 0 rgba(255,255,255,.16)}
+  .cell.wrong .mark{color:#f7e9e3;font-size:.80em;text-shadow:0 2px 4px rgba(64,0,0,.35)}
+  .cell.wrong .mark::after{content:"";position:absolute;inset:16%;border-radius:50%;box-shadow:0 0 0 3px rgba(174,49,49,.78)}
+  .cell.found .mark{font-size:.92em;filter:drop-shadow(0 2px 2px rgba(0,0,0,.25))}
+  .cell.manual-empty{opacity:.84}
+
+  .board-overlay{position:absolute;inset:0;display:none;place-items:center;background:rgba(246,240,228,.74);backdrop-filter:blur(3px);border-radius:14px;z-index:20;text-align:center;padding:24px;font-weight:900}
+  .board-overlay.show{display:grid}
+  .spinner{width:34px;height:34px;border:4px solid rgba(70,63,54,.16);border-top-color:#5f6f57;border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 10px}
+  @keyframes spin{to{transform:rotate(360deg)}}
+
+  .status-strip{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:10px}
+  .stat{background:rgba(255,255,255,.58);border:1px solid rgba(70,60,48,.08);border-radius:12px;padding:9px 8px;text-align:center}
+  .stat strong{display:block;font-size:17px}
+  .stat span{font-size:11px;color:var(--muted);font-weight:700}
+
+  .side{display:grid;gap:12px}
+  .roster{padding:12px}
+  .roster h2,.rules h2{font-size:14px;margin:0 0 10px}
+  .dino-list{display:grid;gap:6px}
+  .dino{display:grid;grid-template-columns:14px 30px minmax(0,1fr);gap:8px;align-items:center;padding:7px 8px;border-radius:10px;background:rgba(255,255,255,.48);font-size:12px;font-weight:800;transition:.2s ease}
+  .dino .swatch{width:14px;height:14px;border-radius:50%;box-shadow:inset 0 0 0 1px rgba(50,45,38,.12)}
+  .dino .icon{font-size:17px;filter:grayscale(1);opacity:.38;text-align:center;display:grid;place-items:center;line-height:1}
+  .species-icon{display:inline-grid;place-items:center;min-width:27px;height:27px;border-radius:9px;background:rgba(255,255,255,.55);font-size:9px;font-weight:950;letter-spacing:-.04em;border:1px solid rgba(70,60,48,.12)}
+  .found .species-icon{background:rgba(255,255,255,.9);font-size:10px}
+  .dino.found .icon{filter:none;opacity:1}
+  .dino.found{background:rgba(255,255,255,.78);text-decoration:none}
+  .dino.found .name::after{content:"  ✓";color:#59724f}
+
+  .rules{padding:12px;font-size:12px;color:#5f584f;line-height:1.45}
+  .rules ul{margin:7px 0 0;padding-left:18px}
+  .rules li+li{margin-top:4px}
+
+  .toast{position:fixed;left:50%;bottom:max(18px,env(safe-area-inset-bottom));transform:translate(-50%,16px);opacity:0;pointer-events:none;background:#3f3a34;color:white;padding:11px 15px;border-radius:999px;font-size:13px;font-weight:800;box-shadow:0 10px 30px rgba(0,0,0,.18);transition:.22s ease;z-index:100;max-width:calc(100vw - 28px);text-align:center}
+  .toast.show{opacity:1;transform:translate(-50%,0)}
+
+  .modal{position:fixed;inset:0;background:rgba(48,42,36,.42);display:none;place-items:center;padding:18px;z-index:200;backdrop-filter:blur(4px)}
+  .modal.show{display:grid}
+  .modal-card{width:min(100%,400px);background:#f8f2e7;border-radius:22px;padding:24px;text-align:center;box-shadow:0 20px 60px rgba(48,37,27,.25)}
+  .modal-card .big{font-size:54px;line-height:1}
+  .modal-card h2{margin:10px 0 7px;font-size:25px}
+  .modal-card p{margin:0 0 18px;color:var(--muted)}
+  .modal-card button{border:0;background:#596550;color:white;border-radius:13px;padding:12px 18px;font-weight:900;cursor:pointer}
+
+  @media(max-width:760px){
+    body{padding-left:6px;padding-right:6px}
+    .app{padding:7px 0 16px}
+    .hero{margin:0 6px 8px;align-items:flex-start}
+    .hero h1{font-size:clamp(25px,7.2vw,32px);margin-bottom:3px}
+    .hero p{font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .badge{display:none}
+    .controls{padding:8px;margin-bottom:8px;gap:7px;border-radius:16px}
+    .row{display:grid;grid-template-columns:auto repeat(3,minmax(0,1fr));gap:5px;width:100%}
+    .row-label{align-self:center;margin-right:2px;font-size:10px}
+    .choice,.tool,.new-game{min-height:36px;padding:7px 5px;font-size:12px;border-radius:11px;white-space:nowrap}
+    .new-game{margin-left:0;grid-column:2 / -1}
+    .controls .row:nth-child(2){grid-template-columns:auto 1fr 1fr}
+    .hint-row{grid-template-columns:auto 1fr;padding-top:7px}
+    .hint-row span:not(.row-label){display:none}
+    .hint-btn{margin:0;width:auto;grid-column:2}
+    .game-layout{grid-template-columns:1fr;gap:8px}
+    .board-card{padding:7px;border-radius:16px}
+    .board-wrap{width:min(100%,calc(100svh - 285px));max-width:none}
+    .board{border-width:2px;border-radius:11px}
+    .status-strip{gap:4px;margin-top:6px}
+    .stat{padding:5px 2px;border-radius:9px}
+    .stat strong{font-size:14px}
+    .stat span{font-size:8.5px}
+    .side{grid-template-columns:1fr}
+    .roster{order:1;padding:8px}
+    .rules{order:2;padding:8px}
+    .roster h2,.rules h2{font-size:12px;margin-bottom:6px}
+    .dino-list{grid-template-columns:repeat(3,minmax(0,1fr));gap:4px}
+    .dino{grid-template-columns:9px 22px minmax(0,1fr);gap:3px;padding:4px;font-size:8.5px}
+    .species-icon{min-width:20px;height:20px;font-size:7px}
+    .rules{font-size:10px}
+  }
+  @media(max-width:430px){
+    .hero p{display:none}
+    .controls{gap:5px}
+    .choice,.tool,.new-game{font-size:11px;min-height:34px}
+    .board-wrap{width:min(100%,calc(100svh - 238px))}
+    .dino-list{grid-template-columns:repeat(2,minmax(0,1fr))}
+    .cell.boundary-right{border-right-width:5px}
+    .cell.boundary-bottom{border-bottom-width:6px}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="hero">
+    <div>
+      <h1>Caça aos Dinossauros</h1>
+      <p>Uma expedição de lógica, escavação e fósseis escondidos.</p>
+    </div>
+    <div class="badge" id="logicBadge">Lógica validada • sem chutes</div>
+  </header>
+
+  <section class="panel controls" aria-label="Controles do jogo">
+    <div class="row">
+      <span class="row-label">Nível</span>
+      <button class="choice active" data-level="5">Fácil 5×5</button>
+      <button class="choice" data-level="8">Médio 8×8</button>
+      <button class="choice" data-level="12">Difícil 12×12</button>
+      <button class="new-game" id="newGame">↻ Novo mapa</button>
+    </div>
+    <div class="row">
+      <span class="row-label">Ferramenta</span>
+      <button class="tool active" data-tool="search">🦴 Procurar fóssil</button>
+      <button class="tool" data-tool="mark">⛏️ Marcar vazio</button>
+    </div>
+    <div class="row hint-row">
+      <span class="row-label">Ajuda</span>
+      <span style="font-size:12px;color:var(--muted);font-weight:700">Travou? Peça apenas a próxima dedução possível.</span>
+      <button class="tool hint-btn" id="hintBtn">💡 Dica lógica</button>
+    </div>
+  </section>
+
+  <main class="game-layout">
+    <section class="panel board-card">
+      <div class="board-wrap">
+        <div class="board" id="board" role="grid" aria-label="Área de escavação"></div>
+        <div class="board-overlay" id="overlay">
+          <div><div class="spinner"></div><div>Preparando uma escavação solucionável…</div></div>
+        </div>
+      </div>
+      <div class="status-strip">
+        <div class="stat"><strong id="foundCount">0/5</strong><span>encontrados</span></div>
+        <div class="stat"><strong id="errorCount">0</strong><span>erros</span></div>
+        <div class="stat"><strong id="markCount">0</strong><span>marcados vazios</span></div>
+        <div class="stat"><strong id="timerCount">00:00</strong><span id="timerLabel">tempo</span></div>
+      </div>
+    </section>
+
+    <aside class="side">
+      <section class="panel roster">
+        <h2>Dinossauros da expedição</h2>
+        <div class="dino-list" id="dinoList"></div>
+      </section>
+      <section class="panel rules">
+        <h2>Regras da escavação</h2>
+        <ul>
+          <li>Há exatamente <strong>1 dinossauro por cor</strong>.</li>
+          <li>Há exatamente <strong>1 por linha</strong> e <strong>1 por coluna</strong>.</li>
+          <li>Dois dinossauros nunca ficam encostados, nem na diagonal.</li>
+          <li>As regiões coloridas são manchas contínuas.</li>
+          <li>O mapa só é liberado depois de o sistema comprovar que pode ser resolvido por deduções simples.</li>
+        </ul>
+      </section>
+    </aside>
+  </main>
+</div>
+
+<div class="toast" id="toast"></div>
+<div class="modal" id="winModal" role="dialog" aria-modal="true" aria-labelledby="winTitle">
+  <div class="modal-card">
+    <div class="big">🦖</div>
+    <h2 id="winTitle">Expedição concluída!</h2>
+    <p id="winText"></p>
+    <button id="playAgain">Nova escavação</button>
+  </div>
+</div>
+
+<script>
+(() => {
+  'use strict';
+
+  const PALETTE = [
+    '#d9c8ad','#c7d7c1','#d8c5c8','#c8d6de',
+    '#e1d0a9','#c8c4d9','#d4d8b7','#e0c4ad',
+    '#bfd2cf','#dac5b3','#c9d0b7','#d5c0d4'
+  ];
+
+  const DINOS = [
+    {name:'Tiranossauro Rex', icon:'🦖', tag:'T-REX'},
+    {name:'Tricerátops', icon:'🦕', tag:'TRI'},
+    {name:'Estegossauro', icon:'🦕', tag:'STE'},
+    {name:'Braquiossauro', icon:'🦕', tag:'BRA'},
+    {name:'Velociraptor', icon:'🦖', tag:'RAP'},
+    {name:'Espinossauro', icon:'🦖', tag:'SPI'},
+    {name:'Anquilossauro', icon:'🦕', tag:'ANK'},
+    {name:'Parasaurolophus', icon:'🦕', tag:'PAR'},
+    {name:'Diplodoco', icon:'🦕', tag:'DIP'},
+    {name:'Carnotauro', icon:'🦖', tag:'CAR'},
+    {name:'Paquicefalossauro', icon:'🦕', tag:'PAC'},
+    {name:'Iguanodonte', icon:'🦕', tag:'IGU'}
+  ];
+
+  const boardEl = document.getElementById('board');
+  const overlay = document.getElementById('overlay');
+  const dinoList = document.getElementById('dinoList');
+  const foundCount = document.getElementById('foundCount');
+  const errorCount = document.getElementById('errorCount');
+  const markCount = document.getElementById('markCount');
+  const timerCount = document.getElementById('timerCount');
+  const timerLabel = document.getElementById('timerLabel');
+  const toastEl = document.getElementById('toast');
+  const winModal = document.getElementById('winModal');
+  const winText = document.getElementById('winText');
+  const logicBadge = document.getElementById('logicBadge');
+
+  let level = 5;
+  let tool = 'search';
+  let game = null;
+  let toastTimer = null;
+  let timerId = null, startedAt = 0, elapsedMs = 0;
+  function fmtTime(ms){ const sec=Math.floor(ms/1000), m=Math.floor(sec/60), s=sec%60; return `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`; }
+  function stopTimer(){ if(timerId){clearInterval(timerId);timerId=null;} if(startedAt) elapsedMs=Date.now()-startedAt; }
+  function startTimer(){ if(timerId) clearInterval(timerId); startedAt=Date.now(); elapsedMs=0; timerCount.textContent='00:00'; timerLabel.textContent='tempo'; timerId=setInterval(()=>{elapsedMs=Date.now()-startedAt;timerCount.textContent=fmtTime(elapsedMs)},250); }
+  function saveBest(){ stopTimer(); const key=`dinoBest_${game.n}`; const prev=Number(localStorage.getItem(key)||0); if(!prev||elapsedMs<prev)localStorage.setItem(key,String(elapsedMs)); return Number(localStorage.getItem(key)||elapsedMs); }
+
+  function shuffle(arr){
+    const a = arr.slice();
+    for(let i=a.length-1;i>0;i--){
+      const j = Math.floor(Math.random()*(i+1));
+      [a[i],a[j]]=[a[j],a[i]];
+    }
+    return a;
+  }
+
+  function weightedPick(items, weights){
+    let total = 0;
+    for(const w of weights) total += w;
+    let x = Math.random()*total;
+    for(let i=0;i<items.length;i++){
+      x -= weights[i];
+      if(x <= 0) return items[i];
+    }
+    return items[items.length-1];
+  }
+
+  // Gera uma permutação: um dinossauro por linha/coluna e nenhum encostado.
+  function generatePlacement(n){
+    const sol = Array(n).fill(-1);
+    const used = Array(n).fill(false);
+
+    function backtrack(r){
+      if(r === n) return true;
+      const choices = shuffle([...Array(n).keys()].filter(c =>
+        !used[c] && (r === 0 || Math.abs(c-sol[r-1]) > 1)
+      ));
+      for(const c of choices){
+        sol[r] = c;
+        used[c] = true;
+        if(backtrack(r+1)) return true;
+        used[c] = false;
+        sol[r] = -1;
+      }
+      return false;
+    }
+    return backtrack(0) ? sol : null;
+  }
+
+  function attacks(sr, sc, r, c){
+    if(sr === r || sc === c) return true;
+    return Math.abs(sr-r) <= 1 && Math.abs(sc-c) <= 1;
+  }
+
+  /*
+    Constrói regiões conectadas em torno dos dinossauros escondidos.
+    A ordem interna de resolução é usada somente pelo gerador: uma região só
+    recebe casas que já terão sido eliminadas por descobertas anteriores.
+    Por isso há uma cadeia real de deduções simples, sem hipótese ou chute.
+  */
+  function buildRegions(n, solution){
+    const order = shuffle([...Array(n).keys()]);
+    const pos = Array(n);
+    order.forEach((regionId,i) => pos[regionId] = i);
+
+    const elim = Array.from({length:n},() => Array(n).fill(Infinity));
+    for(let r=0;r<n;r++){
+      for(let c=0;c<n;c++){
+        if(solution[r] === c) continue;
+        let earliest = Infinity;
+        for(let sr=0;sr<n;sr++){
+          if(attacks(sr,solution[sr],r,c)) earliest = Math.min(earliest,pos[sr]);
+        }
+        elim[r][c] = earliest;
+      }
+    }
+
+    const regions = Array.from({length:n},() => Array(n).fill(-1));
+    const sizes = Array(n).fill(1);
+    let remaining = n*n-n;
+
+    for(let rid=0;rid<n;rid++) regions[rid][solution[rid]] = rid;
+
+    const dirs = [[1,0],[-1,0],[0,1],[0,-1]];
+
+    while(remaining > 0){
+      let minOptions = Infinity;
+      const candidates = [];
+
+      for(let r=0;r<n;r++){
+        for(let c=0;c<n;c++){
+          if(regions[r][c] !== -1) continue;
+          const possible = new Set();
+          for(const [dr,dc] of dirs){
+            const rr=r+dr, cc=c+dc;
+            if(rr<0||rr>=n||cc<0||cc>=n) continue;
+            const rid = regions[rr][cc];
+            if(rid !== -1 && pos[rid] > elim[r][c]) possible.add(rid);
+          }
+          if(possible.size === 0) continue;
+          if(possible.size < minOptions){
+            minOptions = possible.size;
+            candidates.length = 0;
+            candidates.push({r,c,possible:[...possible]});
+          }else if(possible.size === minOptions){
+            candidates.push({r,c,possible:[...possible]});
+          }
+        }
+      }
+
+      if(candidates.length === 0) return null;
+      const cell = candidates[Math.floor(Math.random()*candidates.length)];
+      const weights = cell.possible.map(rid =>
+        Math.pow(pos[rid]+1,1.2) / Math.pow(sizes[rid],1.1)
+      );
+      const rid = weightedPick(cell.possible,weights);
+      regions[cell.r][cell.c] = rid;
+      sizes[rid]++;
+      remaining--;
+    }
+
+    return {regions,sizes,order};
+  }
+
+  function logicValidate(n, regions, initialState=null){
+    const state = initialState ? initialState.map(row=>row.slice()) : Array.from({length:n},() => Array(n).fill(0));
+    const placements = [];
+    const reasons = [];
+    const steps = [];
+
+    const regionCells = Array.from({length:n},() => []);
+    for(let r=0;r<n;r++) for(let c=0;c<n;c++) regionCells[regions[r][c]].push([r,c]);
+
+    const units = [];
+    for(let r=0;r<n;r++) units.push({type:'linha',id:r,cells:[...Array(n).keys()].map(c=>[r,c])});
+    for(let c=0;c<n;c++) units.push({type:'coluna',id:c,cells:[...Array(n).keys()].map(r=>[r,c])});
+    for(let rid=0;rid<n;rid++) units.push({type:'região',id:rid,cells:regionCells[rid]});
+
+    function unitName(u){
+      if(u.type==='linha') return `linha ${u.id+1}`;
+      if(u.type==='coluna') return `coluna ${u.id+1}`;
+      return `região ${DINOS[u.id].name}`;
+    }
+    function eliminate(r,c,reason,record=true){
+      if(state[r][c] === 1) return false;
+      if(state[r][c] === 0){
+        state[r][c] = -1;
+        if(record) steps.push({kind:'empty',r,c,reason});
+      }
+      return true;
+    }
+    function place(r,c,reason){
+      if(state[r][c] === -1) return false;
+      if(state[r][c] === 1) return true;
+      state[r][c] = 1;
+      placements.push([r,c]); reasons.push(reason);
+      steps.push({kind:'dino',r,c,reason});
+      const rid = regions[r][c];
+      for(let cc=0;cc<n;cc++) if(cc!==c && !eliminate(r,cc,`A linha ${r+1} já tem seu dinossauro.`,false)) return false;
+      for(let rr=0;rr<n;rr++) if(rr!==r && !eliminate(rr,c,`A coluna ${c+1} já tem seu dinossauro.`,false)) return false;
+      for(const [rr,cc] of regionCells[rid]) if((rr!==r||cc!==c) && !eliminate(rr,cc,`A região ${DINOS[rid].name} já tem seu dinossauro.`,false)) return false;
+      for(let dr=-1;dr<=1;dr++) for(let dc=-1;dc<=1;dc++){
+        if(dr===0&&dc===0) continue;
+        const rr=r+dr, cc=c+dc;
+        if(rr>=0&&rr<n&&cc>=0&&cc<n && !eliminate(rr,cc,'Dinossauros não podem ficar encostados, nem na diagonal.',false)) return false;
+      }
+      return true;
+    }
+    function candidates(u){ return u.cells.filter(([r,c])=>state[r][c]===0); }
+    function placed(u){ return u.cells.filter(([r,c])=>state[r][c]===1); }
+
+    // Aplica as consequências diretas de dinossauros já conhecidos no estado inicial.
+    const known=[];
+    for(let r=0;r<n;r++) for(let c=0;c<n;c++) if(state[r][c]===1) known.push([r,c]);
+    for(const [r,c] of known){
+      state[r][c]=0;
+      if(!place(r,c,'dinossauro já encontrado')) return {solved:false,placements,reasons,steps,state};
+    }
+    steps.length=0; placements.length=0; reasons.length=0;
+
+    for(let guard=0;guard<20000;guard++){
+      // 1) Casa única em linha, coluna ou região.
+      let acted=false;
+      for(const u of units){
+        const ps=placed(u), cs=candidates(u);
+        if(ps.length>1 || (ps.length===0 && cs.length===0)) return {solved:false,placements,reasons,steps,state};
+        if(ps.length===0 && cs.length===1){
+          const [r,c]=cs[0];
+          if(!place(r,c,`Só resta uma casa possível na ${unitName(u)}.`)) return {solved:false,placements,reasons,steps,state};
+          acted=true; break;
+        }
+      }
+      if(acted){ if(countPlaced(state)===n) return {solved:true,placements,reasons,steps,state}; continue; }
+
+      // 2) Candidatos presos: se todas as opções de uma unidade caem na mesma
+      //    linha/coluna/região, essa outra unidade pode eliminar suas demais casas.
+      outer:
+      for(const u of units){
+        if(placed(u).length) continue;
+        const cs=candidates(u);
+        if(cs.length<2) continue;
+        const rowSet=new Set(cs.map(x=>x[0]));
+        const colSet=new Set(cs.map(x=>x[1]));
+        const regSet=new Set(cs.map(([r,c])=>regions[r][c]));
+        const targets=[];
+        if(rowSet.size===1 && u.type!=='linha') targets.push(units[rowSet.values().next().value]);
+        if(colSet.size===1 && u.type!=='coluna') targets.push(units[n+colSet.values().next().value]);
+        if(regSet.size===1 && u.type!=='região') targets.push(units[2*n+regSet.values().next().value]);
+        const sourceSet=new Set(u.cells.map(([r,c])=>r*n+c));
+        for(const t of targets){
+          for(const [r,c] of t.cells){
+            if(state[r][c]===0 && !sourceSet.has(r*n+c)){
+              const reason=`Todas as opções da ${unitName(u)} estão dentro da ${unitName(t)}; então esta casa não pode ter dinossauro.`;
+              if(!eliminate(r,c,reason,true)) return {solved:false,placements,reasons,steps,state};
+              acted=true; break outer;
+            }
+          }
+        }
+      }
+      if(acted) continue;
+
+      return {solved:countPlaced(state)===n,placements,reasons,steps,state};
+    }
+    return {solved:false,placements,reasons,steps,state};
+  }
+
+  function countPlaced(state){
+    let k=0; for(const row of state) for(const v of row) if(v===1) k++; return k;
+  }
+
+  function generatePuzzle(n){
+    // Muitas tentativas curtas são melhores que aceitar um mapa duvidoso.
+    for(let placementTry=0; placementTry<24; placementTry++){
+      const solution = generatePlacement(n);
+      if(!solution) continue;
+      for(let regionTry=0; regionTry<180; regionTry++){
+        const built = buildRegions(n,solution);
+        if(!built) continue;
+        const validation = logicValidate(n,built.regions);
+        if(validation.solved){
+          return {
+            n,
+            solution,
+            regions:built.regions,
+            regionSizes:built.sizes,
+            deductionReasons:validation.reasons,
+            deductionSteps:validation.steps,
+            cellState:Array(n*n).fill('hidden'),
+            errors:0,
+            foundRegions:new Set(),
+            manualMarks:0
+          };
+        }
+      }
+    }
+    return null;
+  }
+
+  function showToast(message){
+    clearTimeout(toastTimer);
+    toastEl.textContent = message;
+    toastEl.classList.add('show');
+    toastTimer = setTimeout(()=>toastEl.classList.remove('show'),1700);
+  }
+
+  function idx(r,c){ return r*game.n+c; }
+
+  function renderRoster(){
+    dinoList.innerHTML = '';
+    for(let rid=0;rid<game.n;rid++){
+      const item = document.createElement('div');
+      item.className = 'dino' + (game.foundRegions.has(rid) ? ' found' : '');
+      item.innerHTML = `<span class="swatch" style="background:${PALETTE[rid]}"></span><span class="icon"><span class="species-icon">${DINOS[rid].tag}</span></span><span class="name">${DINOS[rid].name}</span>`;
+      dinoList.appendChild(item);
+    }
+  }
+
+  function renderBoard(){
+    boardEl.style.setProperty('--n',game.n);
+    boardEl.innerHTML = '';
+
+    for(let r=0;r<game.n;r++){
+      for(let c=0;c<game.n;c++){
+        const rid = game.regions[r][c];
+        const b = document.createElement('button');
+        b.className = 'cell';
+        b.style.setProperty('--bg',PALETTE[rid]);
+        b.classList.add('terrain-'+(rid%3));
+        b.setAttribute('role','gridcell');
+        b.setAttribute('aria-label',`Linha ${r+1}, coluna ${c+1}, região ${DINOS[rid].name}`);
+        if(r===0 || game.regions[r-1][c]!==rid) b.classList.add('boundary-top');
+        if(c===0 || game.regions[r][c-1]!==rid) b.classList.add('boundary-left');
+        if(c===game.n-1 || game.regions[r][c+1]!==rid) b.classList.add('boundary-right');
+        if(r===game.n-1 || game.regions[r+1][c]!==rid) b.classList.add('boundary-bottom');
+
+        const s = game.cellState[idx(r,c)];
+        const mark = document.createElement('span');
+        mark.className='mark';
+        if(s==='mark'){
+          b.classList.add('dug','manual-empty');
+          mark.textContent='✕';
+        }else if(s==='error'){
+          b.classList.add('dug','wrong');
+          mark.textContent='✕';
+        }else if(s==='found'){
+          b.classList.add('dug','found');
+          mark.innerHTML=`<span class="species-icon">${DINOS[rid].tag}</span>`;
+        }
+        b.appendChild(mark);
+        b.addEventListener('click',()=>handleCell(r,c));
+        boardEl.appendChild(b);
+      }
+    }
+  }
+
+  function updateStats(){
+    foundCount.textContent = `${game.foundRegions.size}/${game.n}`;
+    errorCount.textContent = String(game.errors);
+    markCount.textContent = String(game.manualMarks);
+  }
+
+  function currentLogicState(){
+    const st=Array.from({length:game.n},()=>Array(game.n).fill(0));
+    for(let r=0;r<game.n;r++) for(let c=0;c<game.n;c++){
+      const s=game.cellState[idx(r,c)];
+      if(s==='found') st[r][c]=1;
+      else if(s==='mark' || s==='error') st[r][c]=-1;
+    }
+    return st;
+  }
+
+  function showHint(){
+    if(!game) return;
+    const result=logicValidate(game.n,game.regions,currentLogicState());
+    const step=result.steps.find(x=>{
+      const s=game.cellState[idx(x.r,x.c)];
+      return x.kind==='dino' ? s!=='found' : s==='hidden';
+    });
+    if(!step){
+      showToast('Não encontrei uma dedução simples a partir das marcações atuais. Confira se alguma casa foi marcada vazia por engano.');
+      return;
+    }
+    if(step.kind==='dino') showToast(`💡 ${step.reason} Veja a linha ${step.r+1}, coluna ${step.c+1}.`);
+    else showToast(`💡 ${step.reason} Linha ${step.r+1}, coluna ${step.c+1}.`);
+  }
+
+  function handleCell(r,c){
+    if(!game) return;
+    const i = idx(r,c);
+    const state = game.cellState[i];
+
+    if(tool === 'mark'){
+      if(state === 'hidden'){
+        game.cellState[i] = 'mark';
+        game.manualMarks++;
+      }else if(state === 'mark'){
+        game.cellState[i] = 'hidden';
+        game.manualMarks--;
+      }
+      renderBoard();
+      updateStats();
+      return;
+    }
+
+    if(state === 'mark'){
+      showToast('Essa casa está marcada como vazia. Remova a marcação primeiro.');
+      return;
+    }
+    if(state === 'error' || state === 'found') return;
+
+    if(game.solution[r] === c){
+      const rid = game.regions[r][c];
+      game.cellState[i] = 'found';
+      game.foundRegions.add(rid);
+      showToast(`Encontrou: ${DINOS[rid].name}!`);
+      renderBoard();
+      renderRoster();
+      updateStats();
+      if(game.foundRegions.size === game.n){
+        setTimeout(()=>{
+          const best=saveBest();
+          const base = game.errors === 0 ? 'Você encontrou todos sem nenhuma escavação errada.' : `Você encontrou todos os ${game.n} dinossauros com ${game.errors} ${game.errors===1?'erro':'erros'}.`;
+          winText.textContent = `${base} Tempo: ${fmtTime(elapsedMs)} • Recorde neste nível: ${fmtTime(best)}.`;
+          winModal.classList.add('show');
+        },350);
+      }
+    }else{
+      game.cellState[i] = 'error';
+      game.errors++;
+      showToast('Nada aqui… esta escavação ficou marcada como erro.');
+      renderBoard();
+      updateStats();
+    }
+  }
+
+  async function startGame(){
+    winModal.classList.remove('show');
+    stopTimer();
+    overlay.classList.add('show');
+    logicBadge.textContent = 'Validando lógica…';
+    await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
+
+    const puzzle = generatePuzzle(level);
+    if(!puzzle){
+      overlay.innerHTML = '<div>Não consegui montar um mapa válido nesta tentativa.<br><br><button class="new-game" onclick="location.reload()">Tentar novamente</button></div>';
+      logicBadge.textContent = 'Falha na geração';
+      return;
+    }
+
+    game = puzzle;
+    logicBadge.textContent = 'Lógica validada • solução única • sem chutes';
+    renderBoard();
+    renderRoster();
+    updateStats();
+    overlay.classList.remove('show');
+    startTimer();
+  }
+
+  document.querySelectorAll('[data-level]').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      level = Number(btn.dataset.level);
+      document.querySelectorAll('[data-level]').forEach(b=>b.classList.toggle('active',b===btn));
+      startGame();
+    });
+  });
+
+  document.querySelectorAll('[data-tool]').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      tool = btn.dataset.tool;
+      document.querySelectorAll('[data-tool]').forEach(b=>b.classList.toggle('active',b===btn));
+    });
+  });
+
+  document.getElementById('newGame').addEventListener('click',startGame);
+  document.getElementById('hintBtn').addEventListener('click',showHint);
+  document.getElementById('playAgain').addEventListener('click',startGame);
+  winModal.addEventListener('click',e=>{ if(e.target===winModal) winModal.classList.remove('show'); });
+
+  startGame();
+})();
+</script>
+</body>
+</html>
