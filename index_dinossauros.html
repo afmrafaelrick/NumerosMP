@@ -42,6 +42,8 @@
   .choice:hover,.tool:hover,.new-game:hover{transform:translateY(-1px);background:#fff}
   .choice.active,.tool.active{background:#525b4b;color:#fff;border-color:#525b4b;box-shadow:0 6px 14px rgba(68,79,60,.18)}
   .new-game{margin-left:auto;background:#eadbc3}
+  .hint-row{border-top:1px solid rgba(65,58,49,.10);padding-top:10px}
+  .hint-btn{margin-left:auto;background:#fff3c9;border-color:#d8c58a;white-space:nowrap}
 
   .game-layout{display:grid;grid-template-columns:minmax(0,1fr) 230px;gap:12px;align-items:start}
   .board-card{padding:12px;min-width:0}
@@ -113,6 +115,8 @@
     .controls,.board-card{padding:9px}
     .choice,.tool,.new-game{padding:9px 10px;min-height:40px;font-size:13px}
     .new-game{margin-left:0}
+    .hint-btn{margin-left:0;width:100%}
+    .hint-row span:not(.row-label){flex:1 1 100%}
     .row{gap:6px}
     .dino-list{grid-template-columns:1fr 1fr}
     .dino{grid-template-columns:12px 24px minmax(0,1fr);gap:5px;padding:6px;font-size:10.5px}
@@ -142,7 +146,12 @@
     <div class="row">
       <span class="row-label">Ferramenta</span>
       <button class="tool active" data-tool="search">🦴 Procurar fóssil</button>
-      <button class="tool" data-tool="mark">✕ Marcar vazio</button>
+      <button class="tool" data-tool="mark">⛏️ Marcar vazio</button>
+    </div>
+    <div class="row hint-row">
+      <span class="row-label">Ajuda</span>
+      <span style="font-size:12px;color:var(--muted);font-weight:700">Travou? Peça apenas a próxima dedução possível.</span>
+      <button class="tool hint-btn" id="hintBtn">💡 Dica lógica</button>
     </div>
   </section>
 
@@ -348,10 +357,11 @@
     return {regions,sizes,order};
   }
 
-  function logicValidate(n, regions){
-    const state = Array.from({length:n},() => Array(n).fill(0)); // 0 candidato, -1 eliminado, 1 dinossauro
+  function logicValidate(n, regions, initialState=null){
+    const state = initialState ? initialState.map(row=>row.slice()) : Array.from({length:n},() => Array(n).fill(0));
     const placements = [];
     const reasons = [];
+    const steps = [];
 
     const regionCells = Array.from({length:n},() => []);
     for(let r=0;r<n;r++) for(let c=0;c<n;c++) regionCells[regions[r][c]].push([r,c]);
@@ -361,51 +371,96 @@
     for(let c=0;c<n;c++) units.push({type:'coluna',id:c,cells:[...Array(n).keys()].map(r=>[r,c])});
     for(let rid=0;rid<n;rid++) units.push({type:'região',id:rid,cells:regionCells[rid]});
 
-    function eliminate(r,c){
+    function unitName(u){
+      if(u.type==='linha') return `linha ${u.id+1}`;
+      if(u.type==='coluna') return `coluna ${u.id+1}`;
+      return `região ${DINOS[u.id].name}`;
+    }
+    function eliminate(r,c,reason,record=true){
       if(state[r][c] === 1) return false;
-      if(state[r][c] === 0) state[r][c] = -1;
+      if(state[r][c] === 0){
+        state[r][c] = -1;
+        if(record) steps.push({kind:'empty',r,c,reason});
+      }
       return true;
     }
-
     function place(r,c,reason){
       if(state[r][c] === -1) return false;
       if(state[r][c] === 1) return true;
       state[r][c] = 1;
-      placements.push([r,c]);
-      reasons.push(reason);
+      placements.push([r,c]); reasons.push(reason);
+      steps.push({kind:'dino',r,c,reason});
       const rid = regions[r][c];
-
-      for(let cc=0;cc<n;cc++) if(cc!==c && !eliminate(r,cc)) return false;
-      for(let rr=0;rr<n;rr++) if(rr!==r && !eliminate(rr,c)) return false;
-      for(const [rr,cc] of regionCells[rid]) if((rr!==r||cc!==c) && !eliminate(rr,cc)) return false;
+      for(let cc=0;cc<n;cc++) if(cc!==c && !eliminate(r,cc,`A linha ${r+1} já tem seu dinossauro.`,false)) return false;
+      for(let rr=0;rr<n;rr++) if(rr!==r && !eliminate(rr,c,`A coluna ${c+1} já tem seu dinossauro.`,false)) return false;
+      for(const [rr,cc] of regionCells[rid]) if((rr!==r||cc!==c) && !eliminate(rr,cc,`A região ${DINOS[rid].name} já tem seu dinossauro.`,false)) return false;
       for(let dr=-1;dr<=1;dr++) for(let dc=-1;dc<=1;dc++){
         if(dr===0&&dc===0) continue;
         const rr=r+dr, cc=c+dc;
-        if(rr>=0&&rr<n&&cc>=0&&cc<n && !eliminate(rr,cc)) return false;
+        if(rr>=0&&rr<n&&cc>=0&&cc<n && !eliminate(rr,cc,'Dinossauros não podem ficar encostados, nem na diagonal.',false)) return false;
       }
       return true;
     }
+    function candidates(u){ return u.cells.filter(([r,c])=>state[r][c]===0); }
+    function placed(u){ return u.cells.filter(([r,c])=>state[r][c]===1); }
 
-    for(let guard=0;guard<10000;guard++){
-      let progress = false;
+    // Aplica as consequências diretas de dinossauros já conhecidos no estado inicial.
+    const known=[];
+    for(let r=0;r<n;r++) for(let c=0;c<n;c++) if(state[r][c]===1) known.push([r,c]);
+    for(const [r,c] of known){
+      state[r][c]=0;
+      if(!place(r,c,'dinossauro já encontrado')) return {solved:false,placements,reasons,steps,state};
+    }
+    steps.length=0; placements.length=0; reasons.length=0;
 
-      for(const unit of units){
-        const placed = unit.cells.filter(([r,c]) => state[r][c]===1);
-        const candidates = unit.cells.filter(([r,c]) => state[r][c]===0);
-        if(placed.length > 1) return {solved:false,placements,reasons};
-        if(placed.length === 0 && candidates.length === 0) return {solved:false,placements,reasons};
-        if(placed.length === 0 && candidates.length === 1){
-          if(!place(candidates[0][0],candidates[0][1],`única casa possível na ${unit.type}`))
-            return {solved:false,placements,reasons};
-          progress = true;
-          break;
+    for(let guard=0;guard<20000;guard++){
+      // 1) Casa única em linha, coluna ou região.
+      let acted=false;
+      for(const u of units){
+        const ps=placed(u), cs=candidates(u);
+        if(ps.length>1 || (ps.length===0 && cs.length===0)) return {solved:false,placements,reasons,steps,state};
+        if(ps.length===0 && cs.length===1){
+          const [r,c]=cs[0];
+          if(!place(r,c,`Só resta uma casa possível na ${unitName(u)}.`)) return {solved:false,placements,reasons,steps,state};
+          acted=true; break;
         }
       }
+      if(acted){ if(countPlaced(state)===n) return {solved:true,placements,reasons,steps,state}; continue; }
 
-      if(placements.length === n) return {solved:true,placements,reasons};
-      if(!progress) return {solved:false,placements,reasons};
+      // 2) Candidatos presos: se todas as opções de uma unidade caem na mesma
+      //    linha/coluna/região, essa outra unidade pode eliminar suas demais casas.
+      outer:
+      for(const u of units){
+        if(placed(u).length) continue;
+        const cs=candidates(u);
+        if(cs.length<2) continue;
+        const rowSet=new Set(cs.map(x=>x[0]));
+        const colSet=new Set(cs.map(x=>x[1]));
+        const regSet=new Set(cs.map(([r,c])=>regions[r][c]));
+        const targets=[];
+        if(rowSet.size===1 && u.type!=='linha') targets.push(units[rowSet.values().next().value]);
+        if(colSet.size===1 && u.type!=='coluna') targets.push(units[n+colSet.values().next().value]);
+        if(regSet.size===1 && u.type!=='região') targets.push(units[2*n+regSet.values().next().value]);
+        const sourceSet=new Set(u.cells.map(([r,c])=>r*n+c));
+        for(const t of targets){
+          for(const [r,c] of t.cells){
+            if(state[r][c]===0 && !sourceSet.has(r*n+c)){
+              const reason=`Todas as opções da ${unitName(u)} estão dentro da ${unitName(t)}; então esta casa não pode ter dinossauro.`;
+              if(!eliminate(r,c,reason,true)) return {solved:false,placements,reasons,steps,state};
+              acted=true; break outer;
+            }
+          }
+        }
+      }
+      if(acted) continue;
+
+      return {solved:countPlaced(state)===n,placements,reasons,steps,state};
     }
-    return {solved:false,placements,reasons};
+    return {solved:false,placements,reasons,steps,state};
+  }
+
+  function countPlaced(state){
+    let k=0; for(const row of state) for(const v of row) if(v===1) k++; return k;
   }
 
   function generatePuzzle(n){
@@ -424,6 +479,7 @@
             regions:built.regions,
             regionSizes:built.sizes,
             deductionReasons:validation.reasons,
+            deductionSteps:validation.steps,
             cellState:Array(n*n).fill('hidden'),
             errors:0,
             foundRegions:new Set(),
@@ -493,6 +549,31 @@
     foundCount.textContent = `${game.foundRegions.size}/${game.n}`;
     errorCount.textContent = String(game.errors);
     markCount.textContent = String(game.manualMarks);
+  }
+
+  function currentLogicState(){
+    const st=Array.from({length:game.n},()=>Array(game.n).fill(0));
+    for(let r=0;r<game.n;r++) for(let c=0;c<game.n;c++){
+      const s=game.cellState[idx(r,c)];
+      if(s==='found') st[r][c]=1;
+      else if(s==='mark' || s==='error') st[r][c]=-1;
+    }
+    return st;
+  }
+
+  function showHint(){
+    if(!game) return;
+    const result=logicValidate(game.n,game.regions,currentLogicState());
+    const step=result.steps.find(x=>{
+      const s=game.cellState[idx(x.r,x.c)];
+      return x.kind==='dino' ? s!=='found' : s==='hidden';
+    });
+    if(!step){
+      showToast('Não encontrei uma dedução simples a partir das marcações atuais. Confira se alguma casa foi marcada vazia por engano.');
+      return;
+    }
+    if(step.kind==='dino') showToast(`💡 ${step.reason} Veja a linha ${step.r+1}, coluna ${step.c+1}.`);
+    else showToast(`💡 ${step.reason} Linha ${step.r+1}, coluna ${step.c+1}.`);
   }
 
   function handleCell(r,c){
@@ -581,6 +662,7 @@
   });
 
   document.getElementById('newGame').addEventListener('click',startGame);
+  document.getElementById('hintBtn').addEventListener('click',showHint);
   document.getElementById('playAgain').addEventListener('click',startGame);
   winModal.addEventListener('click',e=>{ if(e.target===winModal) winModal.classList.remove('show'); });
 
