@@ -222,6 +222,36 @@
 .board{box-shadow:0 14px 32px rgba(55,38,20,.24),inset 0 0 0 2px rgba(255,245,217,.45)!important}
 @media(max-width:700px){.asset-edge.top{height:19%}.asset-edge.bottom{height:22%}.asset-edge.left{width:19%}.asset-edge.right{width:22%}.asset-decor{width:36%!important;height:36%!important}}
 
+
+/* V10 — direção artística reforçada: cada região lê como um platô ilustrado */
+.cell::before{opacity:.44!important;background-image:
+ radial-gradient(circle at 12% 18%,rgba(83,61,35,.25) 0 1px,transparent 1.8px),
+ radial-gradient(circle at 68% 72%,rgba(255,245,204,.42) 0 1.2px,transparent 2px),
+ radial-gradient(ellipse at 43% 36%,rgba(105,76,43,.13) 0 3px,transparent 5px),
+ radial-gradient(ellipse at 78% 24%,rgba(255,255,230,.16) 0 7px,transparent 12px)!important;
+ background-size:17px 19px,29px 23px,47px 41px,61px 53px!important}
+.cell::after{border-color:rgba(74,57,36,.045)!important}
+.asset-edge{filter:drop-shadow(0 7px 4px rgba(45,28,13,.46)) saturate(1.08)!important;opacity:1!important}
+.asset-edge.top{height:34%!important;transform:translateY(-1px)}
+.asset-edge.bottom{height:38%!important;transform:translateY(1px)}
+.asset-edge.left{width:34%!important;transform:translateX(-1px)}
+.asset-edge.right{width:38%!important;transform:translateX(1px)}
+.asset-edge::after{content:"";position:absolute;pointer-events:none;opacity:.72;background:repeating-linear-gradient(0deg,transparent 0 5px,rgba(84,49,26,.34) 6px 7px,transparent 8px 12px)}
+.asset-edge.top::after,.asset-edge.bottom::after{left:3%;right:3%;top:28%;bottom:5%}
+.asset-edge.left::after,.asset-edge.right::after{top:3%;bottom:3%;left:28%;right:5%;background:repeating-linear-gradient(90deg,transparent 0 5px,rgba(84,49,26,.34) 6px 7px,transparent 8px 12px)}
+.asset-decor{width:48%!important;height:48%!important;opacity:1!important;filter:drop-shadow(0 4px 3px rgba(42,31,20,.40))!important}
+.asset-decor.small{width:31%!important;height:31%!important}.asset-decor.big{width:58%!important;height:58%!important}
+.cell.dug .mark{width:96%!important;height:90%!important;background:
+ radial-gradient(ellipse at 49% 49%,#120b07 0 29%,#24150d 30% 40%,#472b19 41% 50%,#71492d 51% 59%,#9d693f 60% 66%,#c88e55 67% 72%,transparent 73%)!important;
+ box-shadow:0 9px 13px rgba(35,20,10,.58),inset 0 16px 18px rgba(0,0,0,.84),0 -4px 0 rgba(247,214,151,.68)!important}
+.cell.dug .mark::after{content:"";position:absolute;inset:-12%;border-radius:48%;pointer-events:none;background:
+ radial-gradient(circle at 10% 50%,#6f482b 0 3%,transparent 4%),radial-gradient(circle at 19% 20%,#bd8049 0 4%,transparent 5%),
+ radial-gradient(circle at 87% 35%,#875633 0 3.5%,transparent 4.5%),radial-gradient(circle at 75% 91%,#c38a50 0 4%,transparent 5%),
+ radial-gradient(circle at 40% 4%,#9b6338 0 3%,transparent 4%),radial-gradient(circle at 47% 95%,#72472b 0 3%,transparent 4%)}
+.fossil-card{width:82%!important;height:70%!important;filter:drop-shadow(0 4px 3px #070402)!important}
+.board{background:#6e5034!important;box-shadow:0 16px 36px rgba(55,38,20,.30),inset 0 0 0 3px rgba(255,245,217,.55)!important}
+@media(max-width:700px){.asset-edge.top{height:29%!important}.asset-edge.bottom{height:33%!important}.asset-edge.left{width:29%!important}.asset-edge.right{width:33%!important}.asset-decor{width:41%!important;height:41%!important}}
+
 </style>
 </head>
 <body>
@@ -662,7 +692,7 @@ const DECOR_ASSETS={"rock": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGAAA
           const rr=r+dr,cc=c+dc;
           if(rr<0||cc<0||rr>=game.n||cc>=game.n) continue;
           const nr=game.regions[rr][cc];
-          if(nr!==rid && levels[nr]>levels[rid]){
+          if(nr!==rid && (levels[nr]>levels[rid] || (levels[nr]===levels[rid] && nr>rid))){
             const e=document.createElement('span'); e.className='asset-edge '+side; b.appendChild(e);
           }
         }
