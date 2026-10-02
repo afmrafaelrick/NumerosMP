@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <meta name="theme-color" content="#efe7d6" />
-<title>Caça aos Dinossauros — V4</title>
+<title>Caça aos Dinossauros — V7</title>
 <style>
   :root{
     --ink:#3f3a34;
@@ -108,6 +108,46 @@
   .modal-card h2{margin:10px 0 7px;font-size:25px}
   .modal-card p{margin:0 0 18px;color:var(--muted)}
   .modal-card button{border:0;background:#596550;color:white;border-radius:13px;padding:12px 18px;font-weight:900;cursor:pointer}
+
+
+  /* V7 — terreno ilustrado: superfície orgânica + penhascos com face real */
+  .board{background:#b99a70;border-color:#7d6548;box-shadow:inset 0 0 0 2px rgba(255,245,220,.48),0 8px 20px rgba(75,53,29,.18)}
+  .cell{background-image:
+    radial-gradient(ellipse at 14% 23%,rgba(70,48,27,.16) 0 1.1px,transparent 1.7px),
+    radial-gradient(ellipse at 72% 66%,rgba(255,248,222,.25) 0 1px,transparent 1.7px),
+    radial-gradient(ellipse at 43% 83%,rgba(94,66,36,.11) 0 1.5px,transparent 2px),
+    radial-gradient(ellipse at 82% 18%,rgba(104,77,43,.09) 0 2px,transparent 2.8px),
+    linear-gradient(125deg,rgba(255,255,255,.16),transparent 34%,rgba(91,62,32,.07));
+    background-size:19px 17px,27px 25px,31px 29px,43px 37px,100% 100%;
+    box-shadow:inset 0 1px rgba(255,255,255,.20);}
+  .cell::after{border-color:rgba(84,65,42,.105)}
+  .terrain-cliffs{z-index:4;overflow:hidden}
+  .terrain-cliffs .face{stroke:none;filter:url(#faceNoise)}
+  .terrain-cliffs .face-deep{fill:#765035}
+  .terrain-cliffs .face-mid{fill:#a87549}
+  .terrain-cliffs .face-light{fill:#c99a61}
+  .terrain-cliffs .strata{fill:none;stroke:#6d4931;stroke-width:.018;opacity:.55;vector-effect:non-scaling-stroke}
+  .terrain-cliffs .rim-dark{fill:none;stroke:#725034;stroke-width:5.8;stroke-linecap:round;stroke-linejoin:round;vector-effect:non-scaling-stroke;opacity:.92}
+  .terrain-cliffs .rim-mid{fill:none;stroke:#b88450;stroke-width:3.5;stroke-linecap:round;stroke-linejoin:round;vector-effect:non-scaling-stroke;opacity:.98}
+  .terrain-cliffs .rim-light{fill:none;stroke:#f1d79e;stroke-width:1.35;stroke-linecap:round;stroke-linejoin:round;vector-effect:non-scaling-stroke;opacity:.95}
+  .terrain-cliffs .cast-shadow{fill:none;stroke:rgba(62,42,25,.38);stroke-width:10;stroke-linecap:round;vector-effect:non-scaling-stroke;filter:url(#cliffDrop)}
+  .terrain-decor{position:absolute;z-index:2;pointer-events:none;filter:drop-shadow(0 1px 1px rgba(55,38,22,.25));line-height:1;opacity:.78}
+  .terrain-decor.rock{color:#796a59;font-size:.25em}
+  .terrain-decor.grass{color:#66744d;font-size:.22em}
+  .cell.dug{overflow:visible}
+  .cell.dug .mark{z-index:8;width:88%;height:76%;border-radius:46% 54% 51% 43% / 51% 44% 56% 49%;background:
+    radial-gradient(ellipse at 48% 53%,#21150e 0 34%,#352217 35% 45%,#5b3925 46% 56%,#8a5b38 57% 66%,#b27b4b 67% 72%,transparent 73%),
+    radial-gradient(ellipse at 42% 35%,rgba(255,220,154,.34),transparent 52%);
+    box-shadow:0 6px 7px rgba(44,28,16,.38),inset 0 8px 10px rgba(7,4,2,.62),0 -2px 0 rgba(239,198,130,.46);}
+  .cell.dug .mark::before{inset:-13%;background:
+    radial-gradient(circle at 8% 52%,#8b6547 0 3%,transparent 4%),
+    radial-gradient(circle at 20% 14%,#b47f4e 0 2.6%,transparent 3.7%),
+    radial-gradient(circle at 84% 28%,#765139 0 3%,transparent 4%),
+    radial-gradient(circle at 74% 88%,#a37a55 0 3.3%,transparent 4.4%),
+    radial-gradient(circle at 47% 96%,#704a31 0 2.4%,transparent 3.5%)}
+  .cell.found .mark{font-size:1em}
+  .cell.found .species-icon{position:relative;z-index:3;min-width:70%;height:56%;padding:0 4px;border:0;background:transparent!important;color:#f3e3bf;text-shadow:0 2px 2px #1b1009,1px 0 #4b2f1e,-1px 0 #4b2f1e;font-size:clamp(7px,1.6vw,12px);letter-spacing:-.06em;transform:rotate(-5deg)}
+  .cell.found .species-icon::before{content:"🦴";position:absolute;font-size:1.9em;opacity:.78;left:50%;top:50%;transform:translate(-50%,-50%) rotate(-18deg);z-index:-1;filter:sepia(.7)}
 
   @media(max-width:760px){
     body{padding-left:6px;padding-right:6px}
@@ -577,27 +617,59 @@
       }
     }
 
-    // Um único desenho contínuo para os limites das “planícies”.
-    // Cada segmento é criado só quando duas regiões diferentes se encontram.
+    // V7: cada região recebe uma cota visual. A diferença de cota gera uma FACE de penhasco,
+    // não apenas uma linha. Isso é puramente visual e não altera a lógica do quebra-cabeça.
     const svgNS='http://www.w3.org/2000/svg';
     const svg=document.createElementNS(svgNS,'svg');
     svg.classList.add('terrain-cliffs');
     svg.setAttribute('viewBox',`0 0 ${game.n} ${game.n}`);
     svg.setAttribute('preserveAspectRatio','none');
     svg.innerHTML=`<defs>
-      <filter id="cliffDrop" x="-30%" y="-30%" width="160%" height="160%"><feDropShadow dx="2.8" dy="3.6" stdDeviation="1.5" flood-color="#3f2b1d" flood-opacity=".48"/></filter>
-      <filter id="rockNoise" x="-20%" y="-20%" width="140%" height="140%"><feTurbulence type="fractalNoise" baseFrequency=".75" numOctaves="2" seed="7" result="noise"/><feDisplacementMap in="SourceGraphic" in2="noise" scale=".035" xChannelSelector="R" yChannelSelector="G"/></filter>
+      <filter id="cliffDrop" x="-30%" y="-30%" width="170%" height="170%"><feDropShadow dx="2.4" dy="3.2" stdDeviation="1.5" flood-color="#3b2819" flood-opacity=".5"/></filter>
+      <filter id="faceNoise" x="-10%" y="-10%" width="120%" height="120%"><feTurbulence type="fractalNoise" baseFrequency=".9 .22" numOctaves="2" seed="11" result="n"/><feBlend in="SourceGraphic" in2="n" mode="multiply"/></filter>
     </defs>`;
-    let d='';
+    const levels=Array.from({length:game.n},(_,rid)=>((rid*7 + 2)%4));
+    const add=(tag,attrs,cls)=>{const e=document.createElementNS(svgNS,tag);for(const [k,v] of Object.entries(attrs))e.setAttribute(k,v);if(cls)e.setAttribute('class',cls);svg.appendChild(e);return e;};
+    const depth=(a,b)=>Math.min(.18,.075+.035*Math.max(1,Math.abs(levels[a]-levels[b])));
+    let rims='';
     for(let r=0;r<game.n;r++) for(let c=0;c<game.n;c++){
-      const rid=game.regions[r][c];
-      if(c<game.n-1 && game.regions[r][c+1]!==rid) d+=`M ${c+1} ${r} L ${c+1} ${r+1} `;
-      if(r<game.n-1 && game.regions[r+1][c]!==rid) d+=`M ${c} ${r+1} L ${c+1} ${r+1} `;
+      const a=game.regions[r][c];
+      if(c<game.n-1){
+        const b=game.regions[r][c+1];
+        if(a!==b){
+          const hi=levels[a]===levels[b] ? ((a+b)%2?a:b) : (levels[a]>levels[b]?a:b);
+          const dep=depth(a,b), x=c+1, dir=hi===a?1:-1;
+          const x2=x+dir*dep;
+          add('polygon',{points:`${x},${r} ${x},${r+1} ${x2},${r+1} ${x2},${r}`},'face face-deep');
+          add('polygon',{points:`${x},${r} ${x},${r+1} ${x+dir*dep*.68},${r+1} ${x+dir*dep*.68},${r}`},'face face-mid');
+          add('line',{x1:x+dir*dep*.33,y1:r+.05,x2:x+dir*dep*.33,y2:r+.95},'strata');
+          add('line',{x1:x+dir*dep*.67,y1:r+.08,x2:x+dir*dep*.67,y2:r+.92},'strata');
+          rims+=`M ${x} ${r} L ${x} ${r+1} `;
+        }
+      }
+      if(r<game.n-1){
+        const b=game.regions[r+1][c];
+        if(a!==b){
+          const hi=levels[a]===levels[b] ? ((a+b)%2?a:b) : (levels[a]>levels[b]?a:b);
+          const dep=depth(a,b), y=r+1, dir=hi===a?1:-1;
+          const y2=y+dir*dep;
+          add('polygon',{points:`${c},${y} ${c+1},${y} ${c+1},${y2} ${c},${y2}`},'face face-deep');
+          add('polygon',{points:`${c},${y} ${c+1},${y} ${c+1},${y+dir*dep*.68} ${c},${y+dir*dep*.68}`},'face face-mid');
+          add('line',{x1:c+.05,y1:y+dir*dep*.33,x2:c+.95,y2:y+dir*dep*.33},'strata');
+          add('line',{x1:c+.08,y1:y+dir*dep*.67,x2:c+.92,y2:y+dir*dep*.67},'strata');
+          rims+=`M ${c} ${y} L ${c+1} ${y} `;
+        }
+      }
     }
-    for(const cls of ['cliff-shadow','cliff-deep','cliff-mid','cliff-face','cliff-rim']){
-      const path=document.createElementNS(svgNS,'path'); path.setAttribute('d',d); path.setAttribute('class',cls); svg.appendChild(path);
-    }
+    for(const cls of ['cast-shadow','rim-dark','rim-mid','rim-light']) add('path',{d:rims},cls);
     boardEl.appendChild(svg);
+
+    // Pedrinhas e pequenos tufos quebram o aspecto de "planilha colorida" sem esconder a grade.
+    [...boardEl.querySelectorAll('.cell')].forEach((cell,i)=>{
+      const r=Math.floor(i/game.n),c=i%game.n;
+      const h=(r*37+c*61+game.regions[r][c]*17)%19;
+      if(h===0 || h===7){const d=document.createElement('span');d.className='terrain-decor '+(h===0?'rock':'grass');d.textContent=h===0?'◆':'✦';d.style.left=(18+((r*13+c*7)%58))+'%';d.style.top=(18+((r*9+c*17)%58))+'%';cell.appendChild(d);}
+    });
   }
 
   function updateStats(){
