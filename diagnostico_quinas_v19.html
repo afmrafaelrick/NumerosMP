@@ -1,0 +1,271 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Diagnóstico de quinas — V19</title>
+<style>
+*{box-sizing:border-box} body{margin:0;background:#f3ead7;color:#37342f;font-family:system-ui,-apple-system,Segoe UI,sans-serif}
+main{max-width:920px;margin:auto;padding:18px}
+h1{margin:0 0 5px;font-size:28px} .lead{margin:0 0 18px;color:#665e52}
+.legend{background:#fffaf1;border:1px solid #ddd0b9;border-radius:16px;padding:13px;margin-bottom:16px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px}
+.case{background:#fff;border:1px solid #ded7cc;border-radius:15px;padding:10px;box-shadow:0 2px 8px #0000000c}
+.case-title{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;font-size:13px}
+.diagram{width:128px;height:128px;margin:auto;display:grid;grid-template-columns:1fr 1fr;position:relative;border:1px solid #777}
+.q{display:grid;place-items:center;font-weight:800;font-size:20px;border:.5px solid #ffffff99}
+.qa{background:#e9d8b3} .qb{background:#cfe0cc} .qc{background:#d9c9cf} .qd{background:#c8dce6}
+/* equal letters receive equal color via JS */
+.vertex{position:absolute;left:50%;top:50%;width:10px;height:10px;transform:translate(-50%,-50%);border:2px solid #222;border-radius:50%;background:#fff}
+.choice{display:flex;gap:4px;justify-content:center;margin-top:9px}
+button{border:1px solid #ccc;background:#fafafa;border-radius:7px;padding:6px 8px;font-weight:700}
+button.sel{background:#55604d;color:white;border-color:#55604d}
+.note{font-size:11px;text-align:center;margin-top:6px;color:#746b60}
+pre{white-space:pre-wrap;background:#292b29;color:#f7f3e8;padding:12px;border-radius:12px;font-size:12px}
+.actions{display:flex;gap:8px;flex-wrap:wrap;margin:16px 0}
+.actions button{padding:9px 12px}
+</style></head><body><main>
+<h1>Diagnóstico das quinas — V19</h1>
+<p class="lead">Os 15 encontros possíveis entre quatro células, reduzidos por equivalência de nomes de região.</p>
+<div class="legend"><b>Como ler:</b> o ponto central é o vértice que estamos analisando. Letras iguais = mesma região. Escolha “Nada” ou qual dos quatro pequenos PNGs deve ser aplicado <b>por cima</b> naquele encontro. Esta página não altera o jogo.</div>
+<div class="grid">
+    <section class="case" data-case="1">
+      <div class="case-title"><b>Caso 1</b><span>A A / A A</span></div>
+      <div class="diagram">
+        <div class="q qa">A</div><div class="q qb">A</div>
+        <div class="q qc">A</div><div class="q qd">A</div>
+        <div class="vertex"></div>
+      </div>
+      <div class="choice">
+        <button data-v="none" class="sel">Nada</button>
+        <button data-v="TL">↖</button><button data-v="TR">↗</button>
+        <button data-v="BL">↙</button><button data-v="BR">↘</button>
+      </div>
+      <div class="note">Decisão: <strong>Nada</strong></div>
+    </section>
+    <section class="case" data-case="2">
+      <div class="case-title"><b>Caso 2</b><span>A A / A B</span></div>
+      <div class="diagram">
+        <div class="q qa">A</div><div class="q qb">A</div>
+        <div class="q qc">A</div><div class="q qd">B</div>
+        <div class="vertex"></div>
+      </div>
+      <div class="choice">
+        <button data-v="none" class="sel">Nada</button>
+        <button data-v="TL">↖</button><button data-v="TR">↗</button>
+        <button data-v="BL">↙</button><button data-v="BR">↘</button>
+      </div>
+      <div class="note">Decisão: <strong>Nada</strong></div>
+    </section>
+    <section class="case" data-case="3">
+      <div class="case-title"><b>Caso 3</b><span>A A / B A</span></div>
+      <div class="diagram">
+        <div class="q qa">A</div><div class="q qb">A</div>
+        <div class="q qc">B</div><div class="q qd">A</div>
+        <div class="vertex"></div>
+      </div>
+      <div class="choice">
+        <button data-v="none" class="sel">Nada</button>
+        <button data-v="TL">↖</button><button data-v="TR">↗</button>
+        <button data-v="BL">↙</button><button data-v="BR">↘</button>
+      </div>
+      <div class="note">Decisão: <strong>Nada</strong></div>
+    </section>
+    <section class="case" data-case="4">
+      <div class="case-title"><b>Caso 4</b><span>A A / B B</span></div>
+      <div class="diagram">
+        <div class="q qa">A</div><div class="q qb">A</div>
+        <div class="q qc">B</div><div class="q qd">B</div>
+        <div class="vertex"></div>
+      </div>
+      <div class="choice">
+        <button data-v="none" class="sel">Nada</button>
+        <button data-v="TL">↖</button><button data-v="TR">↗</button>
+        <button data-v="BL">↙</button><button data-v="BR">↘</button>
+      </div>
+      <div class="note">Decisão: <strong>Nada</strong></div>
+    </section>
+    <section class="case" data-case="5">
+      <div class="case-title"><b>Caso 5</b><span>A A / B C</span></div>
+      <div class="diagram">
+        <div class="q qa">A</div><div class="q qb">A</div>
+        <div class="q qc">B</div><div class="q qd">C</div>
+        <div class="vertex"></div>
+      </div>
+      <div class="choice">
+        <button data-v="none" class="sel">Nada</button>
+        <button data-v="TL">↖</button><button data-v="TR">↗</button>
+        <button data-v="BL">↙</button><button data-v="BR">↘</button>
+      </div>
+      <div class="note">Decisão: <strong>Nada</strong></div>
+    </section>
+    <section class="case" data-case="6">
+      <div class="case-title"><b>Caso 6</b><span>A B / A A</span></div>
+      <div class="diagram">
+        <div class="q qa">A</div><div class="q qb">B</div>
+        <div class="q qc">A</div><div class="q qd">A</div>
+        <div class="vertex"></div>
+      </div>
+      <div class="choice">
+        <button data-v="none" class="sel">Nada</button>
+        <button data-v="TL">↖</button><button data-v="TR">↗</button>
+        <button data-v="BL">↙</button><button data-v="BR">↘</button>
+      </div>
+      <div class="note">Decisão: <strong>Nada</strong></div>
+    </section>
+    <section class="case" data-case="7">
+      <div class="case-title"><b>Caso 7</b><span>A B / A B</span></div>
+      <div class="diagram">
+        <div class="q qa">A</div><div class="q qb">B</div>
+        <div class="q qc">A</div><div class="q qd">B</div>
+        <div class="vertex"></div>
+      </div>
+      <div class="choice">
+        <button data-v="none" class="sel">Nada</button>
+        <button data-v="TL">↖</button><button data-v="TR">↗</button>
+        <button data-v="BL">↙</button><button data-v="BR">↘</button>
+      </div>
+      <div class="note">Decisão: <strong>Nada</strong></div>
+    </section>
+    <section class="case" data-case="8">
+      <div class="case-title"><b>Caso 8</b><span>A B / A C</span></div>
+      <div class="diagram">
+        <div class="q qa">A</div><div class="q qb">B</div>
+        <div class="q qc">A</div><div class="q qd">C</div>
+        <div class="vertex"></div>
+      </div>
+      <div class="choice">
+        <button data-v="none" class="sel">Nada</button>
+        <button data-v="TL">↖</button><button data-v="TR">↗</button>
+        <button data-v="BL">↙</button><button data-v="BR">↘</button>
+      </div>
+      <div class="note">Decisão: <strong>Nada</strong></div>
+    </section>
+    <section class="case" data-case="9">
+      <div class="case-title"><b>Caso 9</b><span>A B / B A</span></div>
+      <div class="diagram">
+        <div class="q qa">A</div><div class="q qb">B</div>
+        <div class="q qc">B</div><div class="q qd">A</div>
+        <div class="vertex"></div>
+      </div>
+      <div class="choice">
+        <button data-v="none" class="sel">Nada</button>
+        <button data-v="TL">↖</button><button data-v="TR">↗</button>
+        <button data-v="BL">↙</button><button data-v="BR">↘</button>
+      </div>
+      <div class="note">Decisão: <strong>Nada</strong></div>
+    </section>
+    <section class="case" data-case="10">
+      <div class="case-title"><b>Caso 10</b><span>A B / B B</span></div>
+      <div class="diagram">
+        <div class="q qa">A</div><div class="q qb">B</div>
+        <div class="q qc">B</div><div class="q qd">B</div>
+        <div class="vertex"></div>
+      </div>
+      <div class="choice">
+        <button data-v="none" class="sel">Nada</button>
+        <button data-v="TL">↖</button><button data-v="TR">↗</button>
+        <button data-v="BL">↙</button><button data-v="BR">↘</button>
+      </div>
+      <div class="note">Decisão: <strong>Nada</strong></div>
+    </section>
+    <section class="case" data-case="11">
+      <div class="case-title"><b>Caso 11</b><span>A B / B C</span></div>
+      <div class="diagram">
+        <div class="q qa">A</div><div class="q qb">B</div>
+        <div class="q qc">B</div><div class="q qd">C</div>
+        <div class="vertex"></div>
+      </div>
+      <div class="choice">
+        <button data-v="none" class="sel">Nada</button>
+        <button data-v="TL">↖</button><button data-v="TR">↗</button>
+        <button data-v="BL">↙</button><button data-v="BR">↘</button>
+      </div>
+      <div class="note">Decisão: <strong>Nada</strong></div>
+    </section>
+    <section class="case" data-case="12">
+      <div class="case-title"><b>Caso 12</b><span>A B / C A</span></div>
+      <div class="diagram">
+        <div class="q qa">A</div><div class="q qb">B</div>
+        <div class="q qc">C</div><div class="q qd">A</div>
+        <div class="vertex"></div>
+      </div>
+      <div class="choice">
+        <button data-v="none" class="sel">Nada</button>
+        <button data-v="TL">↖</button><button data-v="TR">↗</button>
+        <button data-v="BL">↙</button><button data-v="BR">↘</button>
+      </div>
+      <div class="note">Decisão: <strong>Nada</strong></div>
+    </section>
+    <section class="case" data-case="13">
+      <div class="case-title"><b>Caso 13</b><span>A B / C B</span></div>
+      <div class="diagram">
+        <div class="q qa">A</div><div class="q qb">B</div>
+        <div class="q qc">C</div><div class="q qd">B</div>
+        <div class="vertex"></div>
+      </div>
+      <div class="choice">
+        <button data-v="none" class="sel">Nada</button>
+        <button data-v="TL">↖</button><button data-v="TR">↗</button>
+        <button data-v="BL">↙</button><button data-v="BR">↘</button>
+      </div>
+      <div class="note">Decisão: <strong>Nada</strong></div>
+    </section>
+    <section class="case" data-case="14">
+      <div class="case-title"><b>Caso 14</b><span>A B / C C</span></div>
+      <div class="diagram">
+        <div class="q qa">A</div><div class="q qb">B</div>
+        <div class="q qc">C</div><div class="q qd">C</div>
+        <div class="vertex"></div>
+      </div>
+      <div class="choice">
+        <button data-v="none" class="sel">Nada</button>
+        <button data-v="TL">↖</button><button data-v="TR">↗</button>
+        <button data-v="BL">↙</button><button data-v="BR">↘</button>
+      </div>
+      <div class="note">Decisão: <strong>Nada</strong></div>
+    </section>
+    <section class="case" data-case="15">
+      <div class="case-title"><b>Caso 15</b><span>A B / C D</span></div>
+      <div class="diagram">
+        <div class="q qa">A</div><div class="q qb">B</div>
+        <div class="q qc">C</div><div class="q qd">D</div>
+        <div class="vertex"></div>
+      </div>
+      <div class="choice">
+        <button data-v="none" class="sel">Nada</button>
+        <button data-v="TL">↖</button><button data-v="TR">↗</button>
+        <button data-v="BL">↙</button><button data-v="BR">↘</button>
+      </div>
+      <div class="note">Decisão: <strong>Nada</strong></div>
+    </section></div>
+<div class="actions"><button id="copy">Gerar tabela das decisões</button><button id="reset">Limpar escolhas</button></div>
+<pre id="out">As decisões aparecerão aqui.</pre>
+</main>
+<script>
+const palette=['#ead8b1','#cfe1c9','#d8c7d0','#c8dce6'];
+document.querySelectorAll('.case').forEach(card=>{
+  const labs=[...card.querySelectorAll('.q')].map(x=>x.textContent.trim());
+  const map={}; let k=0;
+  [...card.querySelectorAll('.q')].forEach((q,i)=>{
+    const L=labs[i]; if(!(L in map)) map[L]=palette[k++]; q.style.background=map[L];
+  });
+  card.querySelectorAll('.choice button').forEach(btn=>btn.onclick=()=>{
+    card.querySelectorAll('.choice button').forEach(b=>b.classList.remove('sel'));
+    btn.classList.add('sel');
+    const v=btn.dataset.v;
+    card.dataset.choice=v;
+    card.querySelector('.note strong').textContent=v==='none'?'Nada':v;
+  });
+  card.dataset.choice='none';
+});
+document.querySelector('#copy').onclick=()=>{
+ const rows=[...document.querySelectorAll('.case')].map(c=>{
+   const pat=c.querySelector('.case-title span').textContent;
+   return `Caso ${c.dataset.case} | ${pat} | ${c.dataset.choice}`;
+ });
+ document.querySelector('#out').textContent=rows.join('\n');
+};
+document.querySelector('#reset').onclick=()=>{
+ document.querySelectorAll('.case').forEach(c=>c.querySelector('button[data-v="none"]').click());
+ document.querySelector('#out').textContent='As decisões aparecerão aqui.';
+};
+</script></body></html>
