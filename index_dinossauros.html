@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <meta name="theme-color" content="#efe7d6" />
-<title>Caça aos Dinossauros — V8</title>
+<title>Caça aos Dinossauros — V9</title>
 <style>
   :root{
     --ink:#3f3a34;
@@ -200,6 +200,28 @@
 .cell .mark{z-index:12}
 .cell.dug .mark{width:86%;height:78%;background:radial-gradient(ellipse at 50% 52%,#21150e 0 34%,#352217 35% 45%,#5b3925 46% 56%,#8a5b38 57% 66%,#b27b4b 67% 72%,transparent 73%);box-shadow:0 7px 9px rgba(44,28,16,.42),inset 0 10px 12px rgba(7,4,2,.70),0 -3px 0 rgba(239,198,130,.48)}
 .board{background:#7f684d;box-shadow:0 10px 24px rgba(65,45,27,.20),inset 0 0 0 2px rgba(255,244,214,.35)}
+
+/* V9 — direção artística: mapa ilustrado em camadas */
+.cell{isolation:isolate;background-size:cover!important}
+.cell::before{content:"";position:absolute;inset:0;z-index:1;pointer-events:none;opacity:.30;background-image:radial-gradient(circle at 18% 23%,rgba(70,53,31,.24) 0 1px,transparent 1.6px),radial-gradient(circle at 72% 68%,rgba(255,246,210,.38) 0 1.2px,transparent 1.9px),radial-gradient(ellipse at 42% 75%,rgba(86,64,38,.13) 0 2px,transparent 3px);background-size:19px 17px,23px 21px,37px 31px;mix-blend-mode:multiply}
+.cell::after{border-color:rgba(74,57,36,.075)!important;z-index:9!important}
+.asset-edge{z-index:8!important;filter:drop-shadow(0 4px 2px rgba(48,29,13,.34))!important}
+.asset-edge.top{height:22%;bottom:auto;background-size:100% 100%!important}
+.asset-edge.bottom{height:25%;top:auto;background-size:100% 100%!important}
+.asset-edge.left{width:22%;right:auto;background-size:100% 100%!important}
+.asset-edge.right{width:25%;left:auto;background-size:100% 100%!important}
+.asset-decor{z-index:6!important;width:42%!important;height:42%!important;opacity:.98!important;filter:drop-shadow(0 3px 2px rgba(42,31,20,.36))!important}
+.asset-decor.small{width:28%!important;height:28%!important}.asset-decor.big{width:52%!important;height:52%!important}
+.cell.dug{z-index:10}
+.cell.dug .mark{z-index:14!important;width:91%!important;height:84%!important;border-radius:46% 54% 49% 51%/43% 48% 52% 57%!important;background:radial-gradient(ellipse at 50% 48%,#17100b 0 30%,#26170f 31% 42%,#4a2d1b 43% 52%,#785033 53% 61%,#a87345 62% 68%,#d09b5e 69% 73%,transparent 74%)!important;box-shadow:0 8px 10px rgba(44,28,16,.48),inset 0 13px 15px rgba(5,3,2,.82),0 -3px 0 rgba(242,207,145,.65)!important;transform:rotate(var(--dig-rot,0deg))}
+.cell.dug .mark::before{content:"";position:absolute;inset:-7%;border-radius:50%;z-index:-1;background:radial-gradient(circle at 15% 35%,#8c603b 0 3%,transparent 4%),radial-gradient(circle at 82% 28%,#b47d4c 0 4%,transparent 5%),radial-gradient(circle at 72% 84%,#765035 0 3%,transparent 4%),radial-gradient(circle at 28% 78%,#c08b55 0 4%,transparent 5%);filter:drop-shadow(0 2px 1px rgba(45,28,15,.3))}
+.cell.found .mark{color:#f4dfb3!important;font-size:clamp(7px,1.15vw,14px)!important;text-shadow:0 2px 1px #000;display:flex!important;align-items:center;justify-content:center}
+.fossil-card{width:70%;height:60%;position:relative;filter:drop-shadow(0 3px 2px #090604)}
+.fossil-card svg{width:100%;height:100%;overflow:visible}.fossil-bone{fill:#ead7aa;stroke:#9d7c50;stroke-width:3;stroke-linejoin:round}
+.dino .icon{width:30px;height:25px}.dino .icon svg{width:100%;height:100%}.dino .icon .sil{fill:#6b665e;opacity:.45}.dino.found .icon .sil{fill:#76513c;opacity:1}
+.board{box-shadow:0 14px 32px rgba(55,38,20,.24),inset 0 0 0 2px rgba(255,245,217,.45)!important}
+@media(max-width:700px){.asset-edge.top{height:19%}.asset-edge.bottom{height:22%}.asset-edge.left{width:19%}.asset-edge.right{width:22%}.asset-decor{width:36%!important;height:36%!important}}
+
 </style>
 </head>
 <body>
@@ -589,12 +611,28 @@ const DECOR_ASSETS={"rock": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGAAA
 
   function idx(r,c){ return r*game.n+c; }
 
+  function dinoSvg(rid, fossil=false){
+    const types=['trex','tri','stego','brachio','raptor','spino','ankylo','para','diplo','carno','pachy','iguano'];
+    const t=types[rid%types.length];
+    const common=`<ellipse class="${fossil?'fossil-bone':'sil'}" cx="47" cy="44" rx="25" ry="13"/><path class="${fossil?'fossil-bone':'sil'}" d="M25 43 Q11 37 8 28 Q18 31 31 35 L35 42Z"/>`;
+    let head='<circle class="'+(fossil?'fossil-bone':'sil')+'" cx="75" cy="35" r="10"/>';
+    let extras='';
+    if(t==='tri') extras='<path class="'+(fossil?'fossil-bone':'sil')+'" d="M67 31 L82 18 L78 34 L91 27 L81 40Z"/>';
+    if(t==='stego') extras='<path class="'+(fossil?'fossil-bone':'sil')+'" d="M30 32 L36 17 L43 31 L50 14 L56 31 L64 18 L68 34Z"/>';
+    if(t==='spino') extras='<path class="'+(fossil?'fossil-bone':'sil')+'" d="M31 35 Q43 5 64 34Z"/>';
+    if(t==='brachio'||t==='diplo') {head='<circle class="'+(fossil?'fossil-bone':'sil')+'" cx="82" cy="12" r="7"/>'; extras='<path class="'+(fossil?'fossil-bone':'sil')+'" d="M61 39 Q67 17 78 13 L84 18 Q74 29 72 45Z"/>';}
+    if(t==='ankylo') extras='<path class="'+(fossil?'fossil-bone':'sil')+'" d="M28 33 l5 -8 5 7 6 -9 6 9 7 -7 6 10Z"/>';
+    if(t==='para') extras='<path class="'+(fossil?'fossil-bone':'sil')+'" d="M73 28 Q92 12 92 24 Q85 31 80 35Z"/>';
+    if(t==='carno') extras='<path class="'+(fossil?'fossil-bone':'sil')+'" d="M69 27 l4 -10 4 10 6 -8 1 11Z"/>';
+    if(t==='pachy') extras='<path class="'+(fossil?'fossil-bone':'sil')+'" d="M68 32 Q75 18 84 29 Q77 23 71 35Z"/>';
+    return `<svg viewBox="0 0 100 75" aria-hidden="true">${common}${head}${extras}<path class="${fossil?'fossil-bone':'sil'}" d="M36 53 l-8 17 h9 l8-15 M58 53 l7 17 h9 l-7-21"/></svg>`;
+  }
   function renderRoster(){
     dinoList.innerHTML = '';
     for(let rid=0;rid<game.n;rid++){
       const item = document.createElement('div');
       item.className = 'dino' + (game.foundRegions.has(rid) ? ' found' : '');
-      item.innerHTML = `<span class="swatch" style="background:${PALETTE[rid]}"></span><span class="icon"><span class="species-icon">${DINOS[rid].tag}</span></span><span class="name">${DINOS[rid].name}</span>`;
+      item.innerHTML = `<span class="swatch" style="background:${PALETTE[rid]}"></span><span class="icon">${dinoSvg(rid,false)}</span><span class="name">${DINOS[rid].name}</span>`;
       dinoList.appendChild(item);
     }
   }
@@ -633,18 +671,19 @@ const DECOR_ASSETS={"rock": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGAAA
         const mark = document.createElement('span'); mark.className='mark';
         if(s==='mark'){b.classList.add('dug','manual-empty');mark.textContent='✕';}
         else if(s==='error'){b.classList.add('dug','wrong');mark.textContent='✕';}
-        else if(s==='found'){b.classList.add('dug','found');mark.innerHTML=`<span class="species-icon">${DINOS[rid].tag}</span>`;}
+        else if(s==='found'){b.classList.add('dug','found');mark.innerHTML=`<span class="fossil-card">${dinoSvg(rid,true)}</span>`; b.style.setProperty('--dig-rot',(((r*13+c*7)%9)-4)+'deg');}
         b.appendChild(mark);
 
         // Decoração ilustrada em overlay, determinística para o mesmo mapa/célula.
         if(s==='hidden'){
-          const h=(r*41+c*67+rid*23)%31;
-          const kinds=['rock','grass','fern','bone'];
-          if(h===0||h===7||h===13||h===21){
-            const kind=kinds[[0,7,13,21].indexOf(h)];
-            const d=document.createElement('span');d.className='asset-decor';
+          const h=(r*41+c*67+rid*23)%23;
+          const map={0:'rock',3:'grass',6:'fern',9:'bone',13:'rock',17:'grass',20:'fern'};
+          if(map[h]){
+            const kind=map[h]; const d=document.createElement('span');
+            d.className='asset-decor '+((h===0||h===20)?'big':(h===9?'small':''));
             d.style.backgroundImage=`url("${DECOR_ASSETS[kind]}")`;
-            d.style.left=(10+((r*17+c*11)%52))+'%'; d.style.top=(9+((r*13+c*19)%52))+'%';
+            d.style.left=(5+((r*17+c*11)%55))+'%'; d.style.top=(5+((r*13+c*19)%55))+'%';
+            d.style.transform=`rotate(${((r*29+c*17)%50)-25}deg)`;
             b.appendChild(d);
           }
         }
