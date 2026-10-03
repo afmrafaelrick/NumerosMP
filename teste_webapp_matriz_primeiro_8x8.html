@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Teste matriz-primeiro 8×8</title>
+<style>
+:root{--ink:#332f29;--paper:#f4eddd;--card:#fffdf8;--green:#56664b;--gold:#ead8a8}
+*{box-sizing:border-box} body{margin:0;background:var(--paper);color:var(--ink);font-family:system-ui,-apple-system,Segoe UI,sans-serif}
+main{max-width:760px;margin:auto;padding:22px 14px 40px}
+h1{font-size:clamp(28px,7vw,44px);margin:0 0 8px} p{font-size:18px;line-height:1.35;margin:0 0 18px;color:#6a6256}
+.card{background:var(--card);border-radius:28px;padding:14px;box-shadow:0 12px 30px #5d4d3520}
+#board{position:relative;aspect-ratio:1;border-radius:22px;overflow:hidden;background:#8ebd58;touch-action:manipulation}
+canvas{position:absolute;inset:0;width:100%;height:100%}
+#hit{position:absolute;inset:0;display:grid;grid-template-columns:repeat(8,1fr);grid-template-rows:repeat(8,1fr)}
+.cell{border:0;background:transparent;padding:0}
+.cell.sel{outline:4px solid #fff7c7;outline-offset:-5px;background:#fff4a82d}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:12px}
+.stat{background:white;border-radius:18px;padding:12px 6px;text-align:center}.big{font-size:27px;font-weight:800}.lab{font-size:13px;color:#766e61;font-weight:700}
+.actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
+button.action{border:0;border-radius:18px;padding:16px;font-size:17px;font-weight:800;background:var(--green);color:white}
+button.action.alt{background:var(--gold);color:var(--ink)}
+.note{margin-top:12px;background:#fff4c9;border-radius:18px;padding:14px;font-size:15px;line-height:1.4}
+</style>
+</head>
+<body><main>
+<h1>Matriz primeiro: 8×8 / 8 regiões</h1>
+<p>Agora a matriz é a fonte de verdade. A arte é desenhada a partir dela; a falésia fica centralizada na fronteira entre duas regiões.</p>
+<div class="card">
+  <div id="board"><canvas id="art" width="1024" height="1024"></canvas><canvas id="grid" width="1024" height="1024"></canvas><div id="hit"></div></div>
+  <div class="stats">
+    <div class="stat"><div class="big" id="coord">—</div><div class="lab">célula</div></div>
+    <div class="stat"><div class="big" id="region">—</div><div class="lab">região</div></div>
+    <div class="stat"><div class="big">8</div><div class="lab">regiões</div></div>
+  </div>
+  <div class="actions"><button class="action" id="toggle">Mostrar grade</button><button class="action alt" id="clear">Limpar</button></div>
+  <div class="note"><b>O que validar:</b> nenhuma falésia pode separar duas células da mesma região; toda fronteira entre regiões deve receber falésia. A espessura da falésia é dividida entre os dois lados da fronteira.</div>
+</div>
+</main>
+<script>
+const M = [[1, 1, 1, 2, 2, 2, 3, 3], [1, 1, 2, 2, 2, 2, 3, 3], [1, 1, 4, 2, 2, 3, 3, 3], [1, 4, 4, 4, 5, 5, 3, 6], [4, 4, 4, 5, 5, 5, 6, 6], [7, 7, 5, 5, 5, 6, 6, 6], [7, 7, 7, 5, 8, 8, 6, 6], [7, 7, 7, 8, 8, 8, 8, 6]];
+const N=8, S=1024, C=S/N;
+const palette={1:"#e9c981",2:"#78b84e",3:"#dc7e86",4:"#8e69bd",5:"#b7bd64",6:"#d48a55",7:"#65a9c5",8:"#8b8378"};
+const art=document.querySelector("#art"), a=art.getContext("2d");
+const grid=document.querySelector("#grid"), g=grid.getContext("2d");
+let gridOn=false;
+
+function rng(x,y,k=0){ let n=Math.sin(x*127.1+y*311.7+k*74.7)*43758.5453; return n-Math.floor(n) }
+function fillRegion(){
+  for(let r=0;r<N;r++)for(let c=0;c<N;c++){
+    let id=M[r][c], x=c*C,y=r*C;
+    a.fillStyle=palette[id]; a.fillRect(x,y,C,C);
+    // painterly mottling, but never changes logical geometry
+    for(let k=0;k<34;k++){
+      let px=x+rng(c,r,k)*C, py=y+rng(r,c,k+20)*C, rad=2+rng(c+k,r)*9;
+      a.globalAlpha=.045+rng(k,c+r)*.05;
+      a.fillStyle=rng(k,r+c)>0.5?"#fff8c9":"#254526";
+      a.beginPath();a.arc(px,py,rad,0,Math.PI*2);a.fill();
+    }
+    a.globalAlpha=1;
+  }
+}
+function cliffSegment(x1,y1,x2,y2){
+  // Centerline is EXACTLY the logical boundary. Half the wall lies on each plateau.
+  a.save(); a.lineCap="round"; a.lineJoin="round";
+  a.strokeStyle="#4b2b18"; a.lineWidth=22; a.globalAlpha=.32; a.beginPath();a.moveTo(x1+5,y1+7);a.lineTo(x2+5,y2+7);a.stroke();
+  a.globalAlpha=1; a.strokeStyle="#7d421e";a.lineWidth=18;a.beginPath();a.moveTo(x1,y1);a.lineTo(x2,y2);a.stroke();
+  a.strokeStyle="#c46b2b";a.lineWidth=10;a.beginPath();a.moveTo(x1,y1-1);a.lineTo(x2,y2-1);a.stroke();
+  a.strokeStyle="#f0a34c";a.lineWidth=3;a.beginPath();a.moveTo(x1,y1-4);a.lineTo(x2,y2-4);a.stroke();
+  // rock seams
+  let len=Math.hypot(x2-x1,y2-y1), steps=Math.max(1,Math.floor(len/25));
+  a.strokeStyle="#5b321d";a.lineWidth=1.5;a.globalAlpha=.55;
+  for(let i=1;i<steps;i++){let t=i/steps, x=x1+(x2-x1)*t,y=y1+(y2-y1)*t;
+    let nx=(y2-y1)/len, ny=-(x2-x1)/len;
+    a.beginPath();a.moveTo(x-nx*7,y-ny*7);a.lineTo(x+nx*7,y+ny*7);a.stroke();
+  }
+  a.restore();
+}
+function cliffs(){
+  // draw every internal boundary ONCE, directly from matrix adjacency
+  for(let r=0;r<N;r++)for(let c=0;c<N;c++){
+    if(c<N-1 && M[r][c]!==M[r][c+1]) cliffSegment((c+1)*C,r*C,(c+1)*C,(r+1)*C);
+    if(r<N-1 && M[r][c]!==M[r+1][c]) cliffSegment(c*C,(r+1)*C,(c+1)*C,(r+1)*C);
+  }
+}
+function decor(){
+  for(let r=0;r<N;r++)for(let c=0;c<N;c++){
+    if(rng(c,r,91)>.58){
+      let x=(c+rng(c,r,92))*C,y=(r+rng(c,r,93))*C;
+      a.fillStyle="#315c32";a.globalAlpha=.8;a.beginPath();a.arc(x,y,5,0,7);a.fill();
+      a.strokeStyle="#214523";a.lineWidth=3;
+      for(let q=0;q<4;q++){let ang=q*1.55+rng(c,r,q);a.beginPath();a.moveTo(x,y);a.lineTo(x+Math.cos(ang)*13,y+Math.sin(ang)*13);a.stroke()}
+    }
+    if(rng(c,r,94)>.78){
+      let x=(c+.2+rng(c,r,95)*.6)*C,y=(r+.2+rng(c,r,96)*.6)*C;
+      a.fillStyle="#716b5f";a.beginPath();a.arc(x,y,9,0,7);a.fill();
+      a.fillStyle="#9b9586";a.beginPath();a.arc(x-3,y-3,4,0,7);a.fill();
+    }
+  } a.globalAlpha=1;
+}
+function render(){a.clearRect(0,0,S,S);fillRegion();cliffs();decor()}
+function drawGrid(){
+ g.clearRect(0,0,S,S); if(!gridOn)return;
+ g.strokeStyle="rgba(255,255,255,.68)";g.lineWidth=2;
+ for(let i=1;i<N;i++){g.beginPath();g.moveTo(i*C,0);g.lineTo(i*C,S);g.stroke();g.beginPath();g.moveTo(0,i*C);g.lineTo(S,i*C);g.stroke()}
+}
+render(); drawGrid();
+
+const hit=document.querySelector("#hit");
+for(let r=0;r<N;r++)for(let c=0;c<N;c++){
+ const b=document.createElement("button");b.className="cell";b.ariaLabel=`linha ${r+1}, coluna ${c+1}, região ${M[r][c]}`;
+ b.onclick=()=>{document.querySelectorAll(".cell").forEach(x=>x.classList.remove("sel"));b.classList.add("sel");coord.textContent=`${r+1},${c+1}`;region.textContent=M[r][c]};
+ hit.appendChild(b);
+}
+toggle.onclick=()=>{gridOn=!gridOn;toggle.textContent=gridOn?"Ocultar grade":"Mostrar grade";drawGrid()};
+clear.onclick=()=>{document.querySelectorAll(".cell").forEach(x=>x.classList.remove("sel"));coord.textContent=region.textContent="—"};
+</script></body></html>
