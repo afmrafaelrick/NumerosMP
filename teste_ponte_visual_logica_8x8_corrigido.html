@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Caça aos Dinossauros — renderer natural 8×8</title>
+<style>
+:root{--bg:#f3ead7;--ink:#332e27;--card:#fffdf8;--green:#59684b;--cream:#ead9a5}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);font-family:system-ui,-apple-system,Segoe UI,sans-serif;color:var(--ink)}
+main{max-width:760px;margin:auto;padding:24px 18px 40px}h1{font-size:clamp(28px,6vw,44px);margin:0 0 8px}p{font-size:18px;line-height:1.35;color:#70685b;margin:0 0 18px}
+.card{background:var(--card);border-radius:30px;padding:16px;box-shadow:0 12px 28px #6e60472a}
+.board{position:relative;aspect-ratio:1;border-radius:26px;overflow:hidden;background:#87ad51;box-shadow:inset 0 0 0 3px #7d693e}
+canvas{position:absolute;inset:0;width:100%;height:100%}.hit{position:absolute;inset:0;display:grid;grid-template-columns:repeat(8,1fr);grid-template-rows:repeat(8,1fr)}
+.cell{border:0;background:transparent;padding:0}.showGrid .cell{outline:1px solid #ffffff7d;outline-offset:-.5px}
+.cell.sel{box-shadow:inset 0 0 0 4px #fff5bd,inset 0 0 0 7px #554b39}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:12px}.stat{background:#fff;border-radius:20px;padding:12px;text-align:center}.stat b{display:block;font-size:30px}.stat span{font-size:13px;font-weight:700;color:#756d61}
+.actions{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}button.ctrl{border:0;border-radius:20px;padding:16px;font-size:18px;font-weight:800;background:var(--green);color:white}.ctrl.alt{background:var(--cream);color:var(--ink)}
+.note{margin-top:14px;background:#fff3c8;border-radius:18px;padding:14px;font-size:15px;color:#665e51}
+</style></head>
+<body><main>
+<h1>Ponte visual + lógica — 8×8</h1>
+<p>A lógica 8×8 continua sendo a fonte de verdade. Este teste preserva a matriz 8×8/8 regiões e trabalha somente a passagem visual para a paisagem aprovada. Sem motor antigo e sem tiles por célula.</p>
+<div class="card">
+<div class="board" id="board"><canvas id="art" width="1024" height="1024"></canvas><div class="hit" id="hit"></div></div>
+<div class="stats"><div class="stat"><b id="coord">—</b><span>célula</span></div><div class="stat"><b id="reg">—</b><span>região</span></div><div class="stat"><b>8</b><span>regiões</span></div></div>
+<div class="actions"><button class="ctrl" id="new">Novo mapa</button><button class="ctrl alt" id="grid">Mostrar grade</button></div>
+<div class="note"><b>O que validar:</b> as falésias continuam exatamente nas fronteiras lógicas, mas agora o cenário deve parecer uma paisagem contínua — não um tabuleiro colorido.</div>
+</div></main>
+<script>
+const N=8, cv=document.querySelector('#art'), ctx=cv.getContext('2d'), board=document.querySelector('#board'), hit=document.querySelector('#hit');
+let M, seed=1, selected=null, grid=false;
+const palettes=[
+ ['#e8c878','#76b94b','#d77f7b','#8f70c6','#68add0','#b8c866','#d9945d','#8f9181'],
+ ['#e4c37a','#6fb64b','#d9877d','#9275c8','#70abc8','#b7c86a','#dc9b62','#8c9681']
+];
+function rnd(){seed=(seed*1664525+1013904223)>>>0;return seed/4294967296}
+function makeMap(){
+ seed=(Date.now()^(Math.random()*1e9))>>>0;
+ let seeds=[]; for(let i=0;i<8;i++){let p;do{p=[Math.floor(rnd()*8),Math.floor(rnd()*8)]}while(seeds.some(q=>q[0]==p[0]&&q[1]==p[1]));seeds.push(p)}
+ M=Array.from({length:8},(_,y)=>Array.from({length:8},(_,x)=>{
+   let best=0,bd=99; seeds.forEach((s,i)=>{let d=Math.abs(x-s[0])+Math.abs(y-s[1])+(rnd()-.5)*1.15;if(d<bd){bd=d;best=i}}); return best;
+ }));
+ // guarantee seed ownership and connected growth approximation via multi-source BFS
+ let A=Array.from({length:8},()=>Array(8).fill(-1)), frontier=seeds.map((s,i)=>[s[0],s[1],i]);
+ seeds.forEach((s,i)=>A[s[1]][s[0]]=i);
+ while(frontier.length){let k=Math.floor(rnd()*frontier.length),[x,y,r]=frontier.splice(k,1)[0];[[1,0],[-1,0],[0,1],[0,-1]].sort(()=>rnd()-.5).forEach(([dx,dy])=>{let X=x+dx,Y=y+dy;if(X>=0&&Y>=0&&X<8&&Y<8&&A[Y][X]<0){A[Y][X]=r;frontier.push([X,Y,r])}})}
+ M=A; selected=null; render(); buildHit();
+}
+function pathRegion(r){
+ const S=128; ctx.beginPath();
+ for(let y=0;y<8;y++)for(let x=0;x<8;x++)if(M[y][x]===r)ctx.rect(x*S,y*S,S,S);
+}
+function render(){
+ const S=128,pal=palettes[seed%2];ctx.clearRect(0,0,1024,1024);
+ // continuous textured region surfaces
+ for(let r=0;r<8;r++){
+   ctx.save();pathRegion(r);ctx.clip();ctx.fillStyle=pal[r];ctx.fillRect(0,0,1024,1024);
+   for(let i=0;i<650;i++){let x=rnd()*1024,y=rnd()*1024,rr=1+rnd()*5;ctx.globalAlpha=.035+rnd()*.06;ctx.fillStyle=rnd()>.5?'#fff7c7':'#365b2f';ctx.beginPath();ctx.arc(x,y,rr,0,7);ctx.fill()}
+   ctx.restore();
+ }
+ // cliffs are derived ONLY from matrix adjacency; the logical border is the centerline.
+ // The wall visually occupies both neighboring plateaus and gets an irregular natural silhouette.
+ function cliff(x1,y1,x2,y2){
+   const vertical=Math.abs(x2-x1)<1, L=Math.hypot(x2-x1,y2-y1), steps=Math.max(6,Math.round(L/12));
+   const pts=[];
+   for(let i=0;i<=steps;i++){
+     let t=i/steps, x=x1+(x2-x1)*t, y=y1+(y2-y1)*t;
+     let wob=(i===0||i===steps)?0:(rnd()-.5)*9;
+     pts.push([x+(vertical?wob:0),y+(vertical?0:wob)]);
+   }
+   function stroke(off, width, color, alpha=1){
+     ctx.save();ctx.globalAlpha=alpha;ctx.strokeStyle=color;ctx.lineWidth=width;ctx.lineCap='round';ctx.lineJoin='round';ctx.beginPath();
+     pts.forEach(([x,y],i)=>{let ox=vertical?off:0,oy=vertical?0:off;i?ctx.lineTo(x+ox,y+oy):ctx.moveTo(x+ox,y+oy)});ctx.stroke();ctx.restore();
+   }
+   // broad soft depth, then rock body centered on the border
+   stroke(8,34,'#392719',.20);
+   stroke(3,29,'#6d3c22',1);
+   stroke(0,23,'#9b5228',1);
+   stroke(-3,12,'#c87534',1);
+   // bright grassy lip on BOTH sides: makes the cliff belong to both plateaus
+   stroke(-11,5,'#7eb943',.95);
+   stroke(11,4,'#5f9638',.88);
+   stroke(-8,2,'#d7d46b',.65);
+   // rock seams perpendicular to the face
+   ctx.save();ctx.strokeStyle='#4b2b1c';ctx.lineWidth=2;ctx.globalAlpha=.48;
+   for(let i=2;i<steps;i+=2){let [x,y]=pts[i],d=8+rnd()*9;ctx.beginPath();if(vertical){ctx.moveTo(x-d,y);ctx.lineTo(x+d,y+(rnd()-.5)*5)}else{ctx.moveTo(x,y-d);ctx.lineTo(x+(rnd()-.5)*5,y+d)}ctx.stroke()}
+   ctx.restore();
+   // tiny plants at the foot/top, sparse enough not to reveal the grid
+   ctx.save();ctx.strokeStyle='#285f32';ctx.lineWidth=2;ctx.globalAlpha=.8;
+   for(let i=2;i<steps;i+=3){if(rnd()<.42)continue;let [x,y]=pts[i],side=rnd()<.5?-1:1,px=x+(vertical?side*15:0),py=y+(vertical?0:side*15);for(let k=-1;k<=1;k++){ctx.beginPath();ctx.moveTo(px,py);ctx.lineTo(px+(vertical?k*4: k*3),py-(vertical?7+3*rnd():7+3*rnd()));ctx.stroke()}}
+   ctx.restore();
+ }
+ for(let y=0;y<8;y++)for(let x=0;x<8;x++){let r=M[y][x],X=x*128,Y=y*128;
+   if(x<7&&M[y][x+1]!==r) cliff(X+128,Y,X+128,Y+128);
+   if(y<7&&M[y+1][x]!==r) cliff(X,Y+128,X+128,Y+128);
+ }
+ // organic decoration, away from excessive density
+ for(let i=0;i<95;i++){let x=20+rnd()*984,y=20+rnd()*984,t=rnd();
+   if(t<.58){ // grass
+    ctx.strokeStyle='#2e6c35';ctx.lineWidth=3;ctx.globalAlpha=.85;for(let k=0;k<3;k++){ctx.beginPath();ctx.moveTo(x,y+8);ctx.lineTo(x+(k-1)*6+(rnd()-.5)*3,y-rnd()*13);ctx.stroke()}
+   } else if(t<.82){ // flower
+    ctx.globalAlpha=.95;ctx.fillStyle='#fff6df';for(let k=0;k<5;k++){let a=k*1.256;ctx.beginPath();ctx.arc(x+Math.cos(a)*5,y+Math.sin(a)*5,3.4,0,7);ctx.fill()}ctx.fillStyle='#e9b63d';ctx.beginPath();ctx.arc(x,y,2.6,0,7);ctx.fill();
+   } else { // rock
+    ctx.globalAlpha=.9;ctx.fillStyle='#716d61';ctx.beginPath();ctx.ellipse(x,y,7+rnd()*8,5+rnd()*6,rnd(),0,7);ctx.fill();ctx.fillStyle='#aaa38e88';ctx.beginPath();ctx.ellipse(x-3,y-3,4,2,0,0,7);ctx.fill();
+   }
+ }
+ ctx.globalAlpha=1;
+ // subtle vignette
+ let g=ctx.createRadialGradient(512,480,300,512,512,730);g.addColorStop(0,'#0000');g.addColorStop(1,'#3a2b1426');ctx.fillStyle=g;ctx.fillRect(0,0,1024,1024);
+}
+function buildHit(){hit.innerHTML='';for(let y=0;y<8;y++)for(let x=0;x<8;x++){let b=document.createElement('button');b.className='cell';b.onclick=()=>{selected=[x,y];document.querySelectorAll('.cell').forEach(e=>e.classList.remove('sel'));b.classList.add('sel');document.querySelector('#coord').textContent=`${x+1},${y+1}`;document.querySelector('#reg').textContent=M[y][x]+1};hit.appendChild(b)}}
+document.querySelector('#new').onclick=makeMap;document.querySelector('#grid').onclick=()=>{grid=!grid;board.classList.toggle('showGrid',grid);document.querySelector('#grid').textContent=grid?'Ocultar grade':'Mostrar grade'};
+makeMap();
+</script></body></html>
