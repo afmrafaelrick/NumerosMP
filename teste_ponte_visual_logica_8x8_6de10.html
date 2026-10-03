@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Caça aos Dinossauros — renderer natural 8×8</title>
+<style>
+:root{--bg:#f3ead7;--ink:#332e27;--card:#fffdf8;--green:#59684b;--cream:#ead9a5}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);font-family:system-ui,-apple-system,Segoe UI,sans-serif;color:var(--ink)}
+main{max-width:760px;margin:auto;padding:24px 18px 40px}h1{font-size:clamp(28px,6vw,44px);margin:0 0 8px}p{font-size:18px;line-height:1.35;color:#70685b;margin:0 0 18px}
+.card{background:var(--card);border-radius:30px;padding:16px;box-shadow:0 12px 28px #6e60472a}
+.board{position:relative;aspect-ratio:1;border-radius:26px;overflow:hidden;background:#87ad51;box-shadow:inset 0 0 0 3px #7d693e}
+canvas{position:absolute;inset:0;width:100%;height:100%}.hit{position:absolute;inset:0;display:grid;grid-template-columns:repeat(8,1fr);grid-template-rows:repeat(8,1fr)}
+.cell{border:0;background:transparent;padding:0}.showGrid .cell{outline:1px solid #ffffff7d;outline-offset:-.5px}
+.cell.sel{box-shadow:inset 0 0 0 4px #fff5bd,inset 0 0 0 7px #554b39}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:12px}.stat{background:#fff;border-radius:20px;padding:12px;text-align:center}.stat b{display:block;font-size:30px}.stat span{font-size:13px;font-weight:700;color:#756d61}
+.actions{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}button.ctrl{border:0;border-radius:20px;padding:16px;font-size:18px;font-weight:800;background:var(--green);color:white}.ctrl.alt{background:var(--cream);color:var(--ink)}
+.note{margin-top:14px;background:#fff3c8;border-radius:18px;padding:14px;font-size:15px;color:#665e51}
+</style></head>
+<body><main>
+<h1>Ponte visual + lógica — 8×8 · acabamento 6/10</h1>
+<p>A lógica 8×8 continua sendo a fonte de verdade. Este teste preserva a matriz 8×8/8 regiões e trabalha somente a passagem visual para a paisagem aprovada. Sem motor antigo e sem tiles por célula.</p>
+<div class="card">
+<div class="board" id="board"><canvas id="art" width="1024" height="1024"></canvas><div class="hit" id="hit"></div></div>
+<div class="stats"><div class="stat"><b id="coord">—</b><span>célula</span></div><div class="stat"><b id="reg">—</b><span>região</span></div><div class="stat"><b>8</b><span>regiões</span></div></div>
+<div class="actions"><button class="ctrl" id="new">Novo mapa</button><button class="ctrl alt" id="grid">Mostrar grade</button></div>
+<div class="note"><b>O que validar:</b> as falésias continuam exatamente nas fronteiras lógicas, mas agora o cenário deve parecer uma paisagem contínua — não um tabuleiro colorido.</div>
+</div></main>
+<script>
+const N=8, cv=document.querySelector('#art'), ctx=cv.getContext('2d'), board=document.querySelector('#board'), hit=document.querySelector('#hit');
+let M, seed=1, selected=null, grid=false;
+const palettes=[
+ ['#e8c878','#76b94b','#d77f7b','#8f70c6','#68add0','#b8c866','#d9945d','#8f9181'],
+ ['#e4c37a','#6fb64b','#d9877d','#9275c8','#70abc8','#b7c86a','#dc9b62','#8c9681']
+];
+function rnd(){seed=(seed*1664525+1013904223)>>>0;return seed/4294967296}
+function makeMap(){
+ seed=(Date.now()^(Math.random()*1e9))>>>0;
+ let seeds=[]; for(let i=0;i<8;i++){let p;do{p=[Math.floor(rnd()*8),Math.floor(rnd()*8)]}while(seeds.some(q=>q[0]==p[0]&&q[1]==p[1]));seeds.push(p)}
+ M=Array.from({length:8},(_,y)=>Array.from({length:8},(_,x)=>{
+   let best=0,bd=99; seeds.forEach((s,i)=>{let d=Math.abs(x-s[0])+Math.abs(y-s[1])+(rnd()-.5)*1.15;if(d<bd){bd=d;best=i}}); return best;
+ }));
+ // guarantee seed ownership and connected growth approximation via multi-source BFS
+ let A=Array.from({length:8},()=>Array(8).fill(-1)), frontier=seeds.map((s,i)=>[s[0],s[1],i]);
+ seeds.forEach((s,i)=>A[s[1]][s[0]]=i);
+ while(frontier.length){let k=Math.floor(rnd()*frontier.length),[x,y,r]=frontier.splice(k,1)[0];[[1,0],[-1,0],[0,1],[0,-1]].sort(()=>rnd()-.5).forEach(([dx,dy])=>{let X=x+dx,Y=y+dy;if(X>=0&&Y>=0&&X<8&&Y<8&&A[Y][X]<0){A[Y][X]=r;frontier.push([X,Y,r])}})}
+ M=A; selected=null; render(); buildHit();
+}
+function pathRegion(r){
+ const S=128; ctx.beginPath();
+ for(let y=0;y<8;y++)for(let x=0;x<8;x++)if(M[y][x]===r)ctx.rect(x*S,y*S,S,S);
+}
+function render(){
+ const S=128,pal=palettes[seed%2];ctx.clearRect(0,0,1024,1024);
+ // superfície contínua por REGIÃO (nunca por célula): base + luz + ruído orgânico
+ for(let r=0;r<8;r++){
+   ctx.save();pathRegion(r);ctx.clip();
+   ctx.fillStyle=pal[r];ctx.fillRect(0,0,1024,1024);
+   let lg=ctx.createLinearGradient(0,0,1024,1024);lg.addColorStop(0,'#fff8c522');lg.addColorStop(.48,'#ffffff00');lg.addColorStop(1,'#29411d18');ctx.fillStyle=lg;ctx.fillRect(0,0,1024,1024);
+   for(let i=0;i<900;i++){let x=rnd()*1024,y=rnd()*1024,rr=.7+rnd()*4.5;ctx.globalAlpha=.025+rnd()*.045;ctx.fillStyle=rnd()>.55?'#fff6bd':'#31552b';ctx.beginPath();ctx.arc(x,y,rr,0,7);ctx.fill()}
+   // manchas largas e suaves quebram a aparência chapada sem denunciar a grade
+   ctx.globalAlpha=.035;for(let i=0;i<24;i++){let x=rnd()*1024,y=rnd()*1024,rx=30+rnd()*85,ry=18+rnd()*55;ctx.fillStyle=rnd()>.5?'#fffbd7':'#274c28';ctx.beginPath();ctx.ellipse(x,y,rx,ry,rnd()*3.14,0,7);ctx.fill()}
+   ctx.restore();ctx.globalAlpha=1;
+ }
+ // falésia: eixo = fronteira lógica; corpo ocupa os dois platôs.
+ function cliff(x1,y1,x2,y2){
+   const vertical=Math.abs(x2-x1)<1,L=Math.hypot(x2-x1,y2-y1),steps=Math.max(10,Math.round(L/8));
+   const pts=[];for(let i=0;i<=steps;i++){let t=i/steps,x=x1+(x2-x1)*t,y=y1+(y2-y1)*t;let wob=(i===0||i===steps)?0:(rnd()-.5)*7;pts.push([x+(vertical?wob:0),y+(vertical?0:wob)])}
+   function line(off,w,col,a=1){ctx.save();ctx.globalAlpha=a;ctx.strokeStyle=col;ctx.lineWidth=w;ctx.lineCap='round';ctx.lineJoin='round';ctx.beginPath();pts.forEach(([x,y],i)=>{x+=vertical?off:0;y+=vertical?0:off;i?ctx.lineTo(x,y):ctx.moveTo(x,y)});ctx.stroke();ctx.restore()}
+   // sombra de contato + massa rochosa; menos 'tubo', mais paredão
+   line(9,42,'#2b2118',.16);line(5,36,'#4c3020',.30);line(1,32,'#6f3d22');line(-1,27,'#9a5128');line(-4,18,'#bd6a31');line(-7,9,'#d78b42');
+   // topo vegetal invade ambos os lados da fronteira
+   line(-14,8,'#4f7e32',.96);line(-11,6,'#79aa3e',1);line(-8,3,'#b5c85b',.9);line(13,5,'#4d7b31',.72);
+   // faces/pedras: pequenos planos irregulares, sem repetição de azulejo
+   ctx.save();ctx.lineCap='round';ctx.lineWidth=2;
+   for(let i=1;i<steps;i++){
+     if(rnd()<.28)continue;let [x,y]=pts[i],span=10+rnd()*8,shift=(rnd()-.5)*7;
+     ctx.strokeStyle=rnd()>.5?'#5a321f':'#e09a50';ctx.globalAlpha=.35+rnd()*.25;ctx.beginPath();
+     if(vertical){ctx.moveTo(x-span,y+shift);ctx.lineTo(x+span,y+shift+(rnd()-.5)*5)}else{ctx.moveTo(x+shift,y-span);ctx.lineTo(x+shift+(rnd()-.5)*5,y+span)}ctx.stroke();
+   }
+   ctx.restore();
+   // vegetação de borda para fundir falésia e terreno
+   ctx.save();ctx.strokeStyle='#285b2f';ctx.lineWidth=2;ctx.globalAlpha=.82;
+   for(let i=2;i<steps;i+=2){if(rnd()<.48)continue;let [x,y]=pts[i],side=rnd()<.5?-1:1,px=x+(vertical?side*(15+rnd()*5):0),py=y+(vertical?0:side*(15+rnd()*5));for(let k=0;k<3;k++){ctx.beginPath();ctx.moveTo(px,py);ctx.lineTo(px+(vertical?(k-1)*4:(k-1)*3),py-5-rnd()*8);ctx.stroke()}}
+   ctx.restore();
+ }
+ for(let y=0;y<8;y++)for(let x=0;x<8;x++){let r=M[y][x],X=x*S,Y=y*S;if(x<7&&M[y][x+1]!==r)cliff(X+S,Y,X+S,Y+S);if(y<7&&M[y+1][x]!==r)cliff(X,Y+S,X+S,Y+S)}
+ // decoração mais rica, mas ainda independente das células
+ for(let i=0;i<150;i++){let x=18+rnd()*988,y=18+rnd()*988,t=rnd();
+   if(t<.55){ctx.strokeStyle=rnd()>.2?'#2d6835':'#527b37';ctx.lineWidth=2.2;ctx.globalAlpha=.82;for(let k=0;k<3;k++){ctx.beginPath();ctx.moveTo(x,y+7);ctx.lineTo(x+(k-1)*5+(rnd()-.5)*3,y-3-rnd()*10);ctx.stroke()}}
+   else if(t<.77){ctx.globalAlpha=.95;let flower=rnd()>.25?'#fff8e9':'#f2a5b6';ctx.fillStyle=flower;for(let k=0;k<5;k++){let a=k*1.256;ctx.beginPath();ctx.arc(x+Math.cos(a)*4.5,y+Math.sin(a)*4.5,3,0,7);ctx.fill()}ctx.fillStyle='#e6b13c';ctx.beginPath();ctx.arc(x,y,2.3,0,7);ctx.fill()}
+   else if(t<.92){ctx.globalAlpha=.92;ctx.fillStyle='#625f56';ctx.beginPath();ctx.ellipse(x,y,6+rnd()*10,5+rnd()*7,rnd()*3.14,0,7);ctx.fill();ctx.fillStyle='#c1b99b77';ctx.beginPath();ctx.ellipse(x-3,y-3,4+rnd()*3,2+rnd()*2,0,0,7);ctx.fill()}
+   else {ctx.globalAlpha=.8;ctx.fillStyle='#376b36';ctx.beginPath();for(let k=0;k<7;k++){let a=k*.9,rr=5+rnd()*8;k?ctx.lineTo(x+Math.cos(a)*rr,y+Math.sin(a)*rr):ctx.moveTo(x+Math.cos(a)*rr,y+Math.sin(a)*rr)}ctx.closePath();ctx.fill()}
+ }
+ ctx.globalAlpha=1;
+ let g=ctx.createRadialGradient(470,430,250,512,512,760);g.addColorStop(0,'#fff6c20b');g.addColorStop(.7,'#0000');g.addColorStop(1,'#2c211632');ctx.fillStyle=g;ctx.fillRect(0,0,1024,1024);
+}
+function buildHit(){hit.innerHTML='';for(let y=0;y<8;y++)for(let x=0;x<8;x++){let b=document.createElement('button');b.className='cell';b.onclick=()=>{selected=[x,y];document.querySelectorAll('.cell').forEach(e=>e.classList.remove('sel'));b.classList.add('sel');document.querySelector('#coord').textContent=`${x+1},${y+1}`;document.querySelector('#reg').textContent=M[y][x]+1};hit.appendChild(b)}}
+document.querySelector('#new').onclick=makeMap;document.querySelector('#grid').onclick=()=>{grid=!grid;board.classList.toggle('showGrid',grid);document.querySelector('#grid').textContent=grid?'Ocultar grade':'Mostrar grade'};
+makeMap();
+</script></body></html>
