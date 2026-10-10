@@ -1,0 +1,520 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#111729">
+<title>Labirinto Mágico — Fantasma & Unicórnio</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&family=Fredoka:wght@400;500;600;700&display=swap');
+  :root{color-scheme:dark;--ink:#eff5ff;--muted:#aab6cb;--accent:#f4c36d;--accent2:#6dcfe9;--panel:rgba(24,34,56,.90);--panelborder:rgba(179,207,245,.13);--bg:#0b1121;--button:#253451;--shadow:rgba(0,0,0,.4)}
+  *{box-sizing:border-box}
+  body{margin:0;min-height:100svh;background:radial-gradient(ellipse at 16% 0%,#253350 0%,transparent 38%),radial-gradient(ellipse at 86% 95%,#252044 0%,transparent 35%),var(--bg);color:var(--ink);font-family:Nunito,system-ui,sans-serif;overflow-x:hidden}
+  body[data-theme="unicorn"]{--accent:#ffb6d5;--accent2:#9bebe1;--panel:rgba(33,34,68,.89);--panelborder:rgba(228,207,255,.19);--button:#3d395f;--bg:#151329;background:radial-gradient(ellipse at 12% 0%,#473260 0%,transparent 38%),radial-gradient(ellipse at 91% 97%,#244e57 0%,transparent 38%),var(--bg)}
+  button,select{font:inherit}
+  button{cursor:pointer}
+  button:focus-visible,select:focus-visible{outline:3px solid var(--accent2);outline-offset:3px}
+  .shell{max-width:1208px;margin:0 auto;padding:22px 24px 30px}
+  .topline{display:flex;justify-content:space-between;align-items:center;gap:20px;margin-bottom:22px}
+  .brand{display:flex;gap:14px;align-items:center}
+  .brand-mark{width:54px;height:54px;display:grid;place-items:center;background:linear-gradient(135deg,#4e6292,#2b324f);border:1px solid rgba(255,255,255,.19);border-radius:17px;font-size:28px;box-shadow:0 8px 26px #0003}
+  .eyebrow{font-size:10px;text-transform:uppercase;letter-spacing:2.9px;font-weight:900;color:var(--accent);margin-bottom:2px}
+  h1,h2,h3,p{margin:0}
+  h1{font:700 clamp(25px,3vw,35px)/1.1 Fredoka,Nunito,sans-serif;letter-spacing:.3px}
+  .subtitle{color:var(--muted);font-size:13px;margin-top:5px;font-weight:700}
+  .top-pill{border:1px solid #456557;background:#1b413c77;color:#a9ffcf;border-radius:99px;padding:8px 12px;font-size:12px;font-weight:900;display:flex;align-items:center;gap:7px;white-space:nowrap}
+  .dot{height:7px;width:7px;background:#67eab0;border-radius:50%;box-shadow:0 0 11px #5effba}
+  .layout{display:grid;grid-template-columns:minmax(0,1fr) 330px;align-items:start;gap:21px}
+  .board-card{position:relative;border:1px solid var(--panelborder);border-radius:25px;background:linear-gradient(145deg,rgba(54,69,104,.45),rgba(14,20,37,.88));padding:11px;box-shadow:0 22px 90px #0309157d, inset 0 1px 0 #ffffff1b;overflow:hidden}
+  .board-head{display:flex;align-items:center;justify-content:space-between;padding:5px 7px 12px;gap:10px}
+  .map-label{display:flex;align-items:center;gap:8px;font-weight:900;font-size:12px;letter-spacing:1.2px;text-transform:uppercase;color:#d1d9ed}
+  .map-label i{width:8px;height:8px;background:var(--accent);border-radius:50%;box-shadow:0 0 10px var(--accent)}
+  .board-size{font-size:12px;font-weight:900;color:#a9b9d2}
+  .board-wrap{width:100%;aspect-ratio:1;position:relative;background:#080d1d;border-radius:17px;overflow:hidden;box-shadow:inset 0 0 0 2px #ffffff12;touch-action:none;user-select:none;isolation:isolate}
+  canvas{display:block;width:100%;height:100%;touch-action:none}
+  .board-wrap:after{content:"";position:absolute;inset:0;pointer-events:none;box-shadow:inset 0 0 50px #04061482,inset 0 0 0 2px #ffffff16;border-radius:17px}
+  .board-footer{display:flex;align-items:center;justify-content:space-between;padding:13px 9px 3px;color:#acb6cd;font-size:11px;font-weight:900;gap:7px}
+  .foot-note{display:flex;gap:7px;align-items:center}
+  .board-footer svg{height:14px;width:14px;stroke:var(--accent);fill:none;stroke-width:2}
+  .panel{background:var(--panel);border:1px solid var(--panelborder);border-radius:24px;padding:19px;box-shadow:0 20px 45px #0003}
+  .side{display:flex;flex-direction:column;gap:15px}
+  .section-head{font-family:Fredoka,Nunito,sans-serif;font-weight:600;letter-spacing:.3px;font-size:17px;margin-bottom:13px}
+  .choice-label{display:block;color:#aab7cf;font-size:11px;font-weight:900;letter-spacing:1.15px;text-transform:uppercase;margin-bottom:8px}
+  .segment{display:grid;gap:6px;background:#101a2e8e;padding:5px;border-radius:14px;border:1px solid #ffffff12}
+  .themes{grid-template-columns:1fr 1fr}
+  .levels{grid-template-columns:1fr 1fr 1fr}
+  .seg-btn{border:1px solid transparent;border-radius:10px;background:transparent;color:#9daec8;padding:10px 6px;min-width:0;font-weight:900;font-size:13px;transition:background .17s,border .17s,transform .12s}
+  .seg-btn span{display:block;font-size:20px;margin-bottom:2px}
+  .seg-btn small{display:block;font-size:10px;font-weight:900;opacity:.8}
+  .seg-btn.active{background:linear-gradient(150deg,#394c75,#303c60);color:white;border-color:#8697bc5f;box-shadow:0 3px 15px #0003}
+  body[data-theme="unicorn"] .seg-btn.active{background:linear-gradient(150deg,#765283,#575278)}
+  .field{margin-top:17px}
+  .primary{width:100%;display:flex;align-items:center;justify-content:center;gap:8px;padding:12px 15px;border:0;border-radius:13px;background:linear-gradient(105deg,#f7d182,#e7a858);color:#3f2817;font-size:14px;font-weight:900;box-shadow:0 5px 0 #a7773c,0 8px 20px #0004;transition:transform .12s,box-shadow .12s}
+  .primary:active{transform:translateY(3px);box-shadow:0 2px 0 #a7773c}
+  body[data-theme="unicorn"] .primary{background:linear-gradient(105deg,#ffc2d8,#dab3ff);color:#50355d;box-shadow:0 5px 0 #9566aa,0 8px 20px #0004}
+  .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}
+  .stat{background:#0b1429a3;border:1px solid #ffffff12;border-radius:12px;text-align:center;padding:11px 4px}
+  .stat-v{font:600 23px/1.15 Fredoka,Nunito,sans-serif;color:#f7f7fe;font-variant-numeric:tabular-nums}
+  .stat-k{font-size:10px;margin-top:4px;color:#9baac6;font-weight:900;text-transform:uppercase;letter-spacing:.5px}
+  .gate-progress{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+  .gate-token{min-width:48px;flex:1;display:flex;align-items:center;justify-content:center;gap:4px;background:#0c1731;border:1px solid #ffffff1c;border-radius:11px;padding:9px 5px;font-size:13px;color:#adbdd7;font-weight:900}
+  .gate-token.done{background:#1a423b8e;border-color:#4dbd9377;color:#baffd5}
+  .hint-note{font-size:11px;color:#a4b1c8;line-height:1.5;margin-top:10px}
+  .control-row{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px}
+  .control-row .section-head{margin:0}
+  .sound-btn{font-size:11px;font-weight:900;border:1px solid #ffffff20;border-radius:10px;color:#c9d4e8;background:#ffffff12;padding:7px 9px}
+  .pad{display:grid;grid-template-columns:repeat(3,64px);grid-template-rows:repeat(2,55px);gap:7px;justify-content:center;margin:12px 0 13px}
+  .arrow-btn{touch-action:none;user-select:none;-webkit-user-select:none;display:grid;place-items:center;border:1px solid #ffffff2b;background:linear-gradient(135deg,#3a4c6b,#23324f);color:#eef8ff;box-shadow:inset 0 1px #ffffff27,0 4px 0 #0c1425;border-radius:13px;font-size:28px;font-weight:800;line-height:1;padding:0}
+  body[data-theme="unicorn"] .arrow-btn{background:linear-gradient(135deg,#6e587e,#414261)}
+  .arrow-btn:active,.arrow-btn.pressed{background:#687a99;transform:translateY(3px);box-shadow:inset 0 1px #ffffff33,0 1px 0 #0c1425}
+  .arrow-btn[data-dir="0"]{grid-column:2;grid-row:1}.arrow-btn[data-dir="3"]{grid-column:1;grid-row:2}.arrow-btn[data-dir="2"]{grid-column:2;grid-row:2}.arrow-btn[data-dir="1"]{grid-column:3;grid-row:2}
+  .tools{display:flex;gap:9px;margin-top:12px}
+  .secondary{flex:1;background:#24344f;color:#d9e6f5;border:1px solid #ffffff24;border-radius:11px;padding:11px 9px;font-size:12px;font-weight:900}
+  .secondary:hover{background:#354665}
+  .instructions{color:#a7b5cc;font-size:12px;line-height:1.6;margin-top:12px}
+  kbd{font:800 10px Nunito,system-ui,sans-serif;border:1px solid #ffffff31;background:#ffffff14;padding:2px 5px;border-radius:4px;color:#cbd5e8}
+  .toast{position:absolute;left:50%;bottom:24px;z-index:2;transform:translateX(-50%);max-width:calc(100% - 30px);background:#10182eea;border:1px solid #e5dbaa60;color:white;backdrop-filter:blur(8px);padding:10px 17px;border-radius:13px;font-weight:900;font-size:13px;text-align:center;box-shadow:0 10px 25px #0006;transition:opacity .2s;pointer-events:none}
+  .toast.hidden{opacity:0}
+  .hint-bubble{position:absolute;top:20px;left:50%;z-index:2;transform:translateX(-50%);background:#152a43ef;border:1px solid #9adbed70;padding:8px 13px;border-radius:13px;color:#dffaff;font-size:13px;font-weight:900;max-width:90%;text-align:center;pointer-events:none;box-shadow:0 7px 25px #0005}
+  .hint-bubble.hidden{display:none}
+  .modal{position:fixed;inset:0;z-index:10;display:grid;place-items:center;background:#070a18c9;backdrop-filter:blur(9px);padding:16px}
+  .modal[hidden]{display:none}
+  .modal-card{max-width:420px;width:100%;text-align:center;background:linear-gradient(155deg,#344466,#191f38);border:1px solid #ffffff36;border-radius:25px;padding:30px 26px;box-shadow:0 30px 100px #000a}
+  .modal-emoji{font-size:67px;margin-bottom:6px;filter:drop-shadow(0 6px 15px #0005)}
+  .modal-card h2{font:650 31px Fredoka,Nunito,sans-serif;margin-bottom:9px}
+  .modal-card p{font-size:15px;color:#c8d6ea;line-height:1.5;margin-bottom:20px}
+  .modal-card .primary{max-width:260px;margin:0 auto}
+  .shake{animation:shake .22s linear}
+  @keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-4px)}60%{transform:translateX(4px)}}
+  @media(max-width:930px){.shell{max-width:750px}.layout{grid-template-columns:1fr}.side{display:grid;grid-template-columns:1fr 1fr;align-items:start}.board-card{max-width:100%}.controls-panel{height:100%}}
+  @media(max-width:590px){.shell{padding:13px 11px 22px}.topline{margin-bottom:13px}.brand{gap:10px}.brand-mark{height:42px;width:42px;border-radius:13px;font-size:22px}.eyebrow{font-size:9px}h1{font-size:25px}.subtitle{font-size:11px}.top-pill{font-size:10px;padding:6px 8px}.layout{gap:12px}.board-card{padding:7px;border-radius:19px}.board-wrap{border-radius:12px}.board-head{padding:4px 5px 9px}.board-footer{font-size:9px;padding:9px 3px 2px}.side{grid-template-columns:1fr;gap:11px}.panel{padding:15px;border-radius:18px}.settings-card{order:2}.controls-panel{order:1}.pad{grid-template-columns:repeat(3,68px);grid-template-rows:repeat(2,54px);margin:10px 0}.instructions{margin-top:9px}.section-head{font-size:16px}.stats{gap:8px}.stat-v{font-size:22px}.toast{font-size:12px;bottom:13px}}
+  @media(prefers-reduced-motion:reduce){*,*:before,*:after{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body data-theme="ghost">
+<div class="shell">
+  <header class="topline">
+    <div class="brand">
+      <div class="brand-mark" id="brandIcon" aria-hidden="true">👻</div>
+      <div><div class="eyebrow">Uma aventura para explorar</div><h1 id="gameTitle">Castelo dos Sussurros</h1><div class="subtitle">Encontre as chaves. Abra as portas. Descubra a saída.</div></div>
+    </div>
+    <div class="top-pill" id="validationPill"><span class="dot"></span> Mapa testado ✓</div>
+  </header>
+  <main class="layout">
+    <section class="board-card" aria-label="Área do labirinto">
+      <div class="board-head"><div class="map-label"><i></i><span id="mapLabel">Aventura medieval</span></div><span id="boardSize" class="board-size">20 × 20</span></div>
+      <div class="board-wrap" id="boardWrap">
+        <canvas id="mazeCanvas" aria-label="Labirinto. Use as setas do teclado ou os botões direcionais para movimentar o personagem."></canvas>
+        <div id="hintBubble" class="hint-bubble hidden" role="status"></div>
+        <div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
+      </div>
+      <div class="board-footer"><div class="foot-note"><svg viewBox="0 0 24 24"><path d="M12 2v20M2 12h20M12 2l3 7-3 3-3-3zM22 12l-7 3-3-3 3-3zM12 22l-3-7 3-3 3 3zM2 12l7-3 3 3-3 3z"/></svg><span>Só é possível enxergar para a frente</span></div><span id="levelTag">Nível fácil</span></div>
+    </section>
+    <aside class="side">
+      <div class="panel settings-card">
+        <h2 class="section-head">Prepare a aventura</h2>
+        <div class="choice-label">Escolha o mundo</div>
+        <div class="segment themes" role="group" aria-label="Temas">
+          <button type="button" class="seg-btn active" data-theme-choice="ghost" aria-pressed="true"><span>👻</span>Medieval</button>
+          <button type="button" class="seg-btn" data-theme-choice="unicorn" aria-pressed="false"><span>🦄</span>Encantado</button>
+        </div>
+        <div class="field"><div class="choice-label">Tamanho do labirinto</div>
+          <div class="segment levels" role="group" aria-label="Dificuldades">
+            <button type="button" class="seg-btn active" data-size="20" aria-pressed="true">Fácil<small>20 × 20</small></button>
+            <button type="button" class="seg-btn" data-size="40" aria-pressed="false">Médio<small>40 × 40</small></button>
+            <button type="button" class="seg-btn" data-size="60" aria-pressed="false">Difícil<small>60 × 60</small></button>
+          </div>
+        </div>
+        <div class="field"><button type="button" id="newGame" class="primary"><span>✦</span> Criar novo labirinto <span>↗</span></button></div>
+      </div>
+      <div class="panel controls-panel">
+        <div class="control-row"><h2 class="section-head">Sua missão</h2><button id="soundBtn" class="sound-btn" type="button" aria-pressed="false">🔇 Som off</button></div>
+        <div class="stats">
+          <div class="stat"><div id="keysStat" class="stat-v">0/1</div><div class="stat-k">Chaves</div></div>
+          <div class="stat"><div id="doorsStat" class="stat-v">0/1</div><div class="stat-k">Portas</div></div>
+          <div class="stat"><div id="stepsStat" class="stat-v">0</div><div class="stat-k">Passos</div></div>
+        </div>
+        <div class="gate-progress" id="gateProgress" aria-label="Andamento das chaves"></div>
+        <p class="hint-note" id="missionText">As chaves estão escondidas. Vasculhe os caminhos antes de chegar às portas!</p>
+        <div class="pad" role="group" aria-label="Controles para mover o personagem">
+          <button type="button" class="arrow-btn" data-dir="0" aria-label="Ir para cima">↑</button>
+          <button type="button" class="arrow-btn" data-dir="3" aria-label="Ir para esquerda">←</button>
+          <button type="button" class="arrow-btn" data-dir="2" aria-label="Ir para baixo">↓</button>
+          <button type="button" class="arrow-btn" data-dir="1" aria-label="Ir para direita">→</button>
+        </div>
+        <div class="tools"><button type="button" id="hintBtn" class="secondary">🧭 Pedir uma dica</button><button type="button" id="helpBtn" class="secondary">❔ Como jogar</button></div>
+        <p class="instructions">Use as <kbd>↑</kbd> <kbd>↓</kbd> <kbd>←</kbd> <kbd>→</kbd> ou <kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd>. No celular, use os botões ou deslize o dedo no mapa. Segure um botão para caminhar.</p>
+      </div>
+    </aside>
+  </main>
+</div>
+<div class="modal" id="modal" hidden role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+  <div class="modal-card"><div id="modalEmoji" class="modal-emoji">🏆</div><h2 id="modalTitle">Você conseguiu!</h2><p id="modalText"></p><button id="modalButton" class="primary" type="button">Outra aventura ✨</button></div>
+</div>
+<script>
+(()=>{'use strict';
+const N=1,E=2,S=4,W=8;
+const DIR=[{dx:0,dy:-1,bit:N,op:S},{dx:1,dy:0,bit:E,op:W},{dx:0,dy:1,bit:S,op:N},{dx:-1,dy:0,bit:W,op:E}];
+const COLORS=['#ffd06d','#69e0ef','#ef9ccf','#9de99e'];
+const canvas=document.getElementById('mazeCanvas'),ctx=canvas.getContext('2d',{alpha:false}),wrap=document.getElementById('boardWrap');
+let selectedSize=20,theme='ghost',maze=null,player=null,steps=0,keysMask=0,openedMask=0,won=false,elapsed=0,startTime=0,winTime=0;
+let sound=false,audioContext=null,toastTimer=0,hintTimer=0,hintDirection=-1,modalMode='win',animClock=0;
+const $=id=>document.getElementById(id);
+const VIEW=7;
+const idOf=(x,y,n)=>y*n+x;
+const xyOf=(i,n)=>({x:i%n,y:Math.floor(i/n)});
+const countBits=n=>{let c=0;while(n){n&=n-1;c++}return c};
+const edgeKey=(a,b)=>a<b?a+':'+b:b+':'+a;
+const shuffle=a=>{for(let i=a.length-1;i>0;i--){let j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a};
+function neighbor(id,d,n){let x=id%n,y=Math.floor(id/n);x+=DIR[d].dx;y+=DIR[d].dy;return x>=0&&y>=0&&x<n&&y<n?idOf(x,y,n):-1}
+function neighborsOpen(m,id){let list=[];for(let d=0;d<4;d++){let to=neighbor(id,d,m.n);if(to>=0&&!(m.walls[id]&DIR[d].bit))list.push({to,d})}return list}
+function generateTree(n){
+  const cells=n*n,walls=new Uint8Array(cells);walls.fill(15);
+  const seen=new Uint8Array(cells),stack=[0];seen[0]=1;
+  while(stack.length){let a=stack[stack.length-1],options=[];for(let d=0;d<4;d++){let b=neighbor(a,d,n);if(b>=0&&!seen[b])options.push({b,d})}
+    if(!options.length){stack.pop();continue}
+    let pick=options[Math.floor(Math.random()*options.length)];walls[a]&=~DIR[pick.d].bit;walls[pick.b]&=~DIR[pick.d].op;seen[pick.b]=1;stack.push(pick.b);
+  }
+  return {n,walls,doors:[],keys:[],doorEdges:new Map(),keyAt:new Map(),path:[]};
+}
+function findPath(m,a,b,mask=15,ignoreDoors=false){
+  const parent=new Int32Array(m.n*m.n).fill(-1);parent[a]=a;const queue=new Int32Array(m.n*m.n);let head=0,tail=0;queue[tail++]=a;
+  while(head<tail){let here=queue[head++];if(here===b)break;
+    for(let {to} of neighborsOpen(m,here)){
+      let door=m.doorEdges.get(edgeKey(here,to));if(!ignoreDoors&&door!==undefined&&!(mask&(1<<door)))continue;
+      if(parent[to]<0){parent[to]=here;queue[tail++]=to}
+    }
+  }
+  if(parent[b]<0)return null;
+  const path=[];for(let at=b;at!==a;at=parent[at])path.push(at);path.push(a);path.reverse();return path;
+}
+function setGatesAndKeys(m,doorCount){
+  let path=findPath(m,0,m.n*m.n-1,15,true);if(!path)return false;
+  m.path=path;
+  let gatePositions=[];
+  for(let i=0;i<doorCount;i++){
+    let idx=Math.max(3,Math.min(path.length-3,Math.round((i+1)*path.length/(doorCount+1))));
+    if(gatePositions.length&&idx<=gatePositions.at(-1)+4)idx=gatePositions.at(-1)+5;
+    if(idx>=path.length-2)return false;
+    gatePositions.push(idx);
+    let from=path[idx-1],to=path[idx];m.doors.push({from,to,id:i});m.doorEdges.set(edgeKey(from,to),i);
+  }
+  // Every cul-de-sac belongs to exactly one branch of the unique entrance-to-exit path.
+  const owner=new Int32Array(m.n*m.n).fill(-1),depth=new Int32Array(m.n*m.n).fill(-1);
+  const q=new Int32Array(m.n*m.n);let head=0,tail=0;
+  for(let i=0;i<path.length;i++){owner[path[i]]=i;depth[path[i]]=0;q[tail++]=path[i]}
+  while(head<tail){let at=q[head++];for(let {to} of neighborsOpen(m,at)){if(owner[to]!==-1)continue;owner[to]=owner[at];depth[to]=depth[at]+1;q[tail++]=to}}
+  for(let i=0;i<doorCount;i++){
+    let lo=i===0?0:gatePositions[i-1],hi=gatePositions[i]-1;
+    let maxBranch=m.n===20?9:m.n===40?13:16;
+    let candidates=[];
+    for(let cell=0;cell<owner.length;cell++){
+      let pi=owner[cell],dist=depth[cell];
+      if(pi<lo+2||pi>=hi-1||dist<2||dist>maxBranch)continue;
+      let progress=(pi-lo)/Math.max(1,hi-lo);
+      let weight=(dist>=3&&dist<=7?16:4)+Math.max(0,9-Math.abs(progress-.55)*25)+Math.random()*18;
+      candidates.push({cell,weight});
+    }
+    if(!candidates.length){for(let pi=lo+2;pi<=hi-2;pi++)candidates.push({cell:path[pi],weight:Math.random()*10})}
+    if(!candidates.length)return false;
+    candidates.sort((a,b)=>b.weight-a.weight);
+    let pick=candidates[Math.floor(Math.random()*Math.min(10,candidates.length))].cell;
+    m.keys.push({at:pick,id:i});m.keyAt.set(pick,i);
+  }
+  return true;
+}
+function validate(m){
+  if(!m||m.doors.length!==m.keys.length)return false;
+  const all=(1<<m.keys.length)-1,size=m.n*m.n;
+  const visited=new Uint8Array(size*(1<<m.keys.length));
+  const qPos=new Int32Array(visited.length),qMask=new Uint8Array(visited.length);
+  let head=0,tail=0,mask0=0;
+  if(m.keyAt.has(0))mask0|=1<<m.keyAt.get(0);
+  qPos[tail]=0;qMask[tail++]=mask0;visited[mask0*size]=1;
+  while(head<tail){let at=qPos[head],mask=qMask[head++];if(at===size-1&&mask===all)return true;
+    for(let {to} of neighborsOpen(m,at)){
+      let door=m.doorEdges.get(edgeKey(at,to));if(door!==undefined&&!(mask&(1<<door)))continue;
+      let next=mask;if(m.keyAt.has(to))next|=1<<m.keyAt.get(to);
+      let state=next*size+to;if(visited[state])continue;
+      visited[state]=1;qPos[tail]=to;qMask[tail++]=next;
+    }
+  }
+  return false;
+}
+function buildMap(n){
+  const count=n===20?1:n===40?2:4;
+  for(let attempt=0;attempt<25;attempt++){
+    let m=generateTree(n);let naturalPath=findPath(m,0,n*n-1,15,true);
+    let minimum=n===20?65:n===40?205:450;
+    if(naturalPath.length<minimum&&attempt<19)continue;
+    if(!setGatesAndKeys(m,count))continue;
+    if(validate(m))return m;
+  }
+  // A generation failure is explicitly rejected, never presented as a playable board.
+  throw new Error('Não foi possível gerar um labirinto solucionável. Tente novamente.');
+}
+function directionFrom(a,b,n){let x=(b%n)-(a%n),y=Math.floor(b/n)-Math.floor(a/n);return DIR.findIndex(d=>d.dx===x&&d.dy===y)}
+function firstFacing(m){return directionFrom(m.path[0],m.path[1],m.n)}
+function refreshStats(){
+  $('keysStat').textContent=countBits(keysMask)+'/'+maze.keys.length;
+  $('doorsStat').textContent=countBits(openedMask)+'/'+maze.doors.length;
+  $('stepsStat').textContent=steps;
+  $('gateProgress').innerHTML=maze.keys.map(k=>{
+    let got=Boolean(keysMask&(1<<k.id)),opened=Boolean(openedMask&(1<<k.id));
+    return `<div class="gate-token ${opened?'done':''}" title="${opened?'Porta aberta':got?'Chave encontrada':'Chave escondida'}" style="${got&&!opened?'border-color:'+COLORS[k.id]+';color:'+COLORS[k.id]:''}">${opened?'✓':got?'🗝':'🔒'} ${k.id+1}</div>`;
+  }).join('');
+  if(countBits(openedMask)===maze.doors.length)$('missionText').textContent='Todas as portas foram abertas! Agora encontre a saída brilhante. 🌟';
+  else if(countBits(keysMask)>countBits(openedMask))$('missionText').textContent='Você tem uma chave! Procure a porta da mesma cor para abrir passagem.';
+  else $('missionText').textContent='As chaves estão escondidas em caminhos laterais. Explore com atenção!';
+}
+function toast(msg,duration=2350){clearTimeout(toastTimer);const el=$('toast');el.textContent=msg;el.classList.remove('hidden');toastTimer=setTimeout(()=>el.classList.add('hidden'),duration)}
+function soundNote(freq=660,duration=.13,wave='sine',volume=.04,delay=0){
+  if(!sound)return;
+  try{audioContext??=new(window.AudioContext||window.webkitAudioContext)();if(audioContext.state==='suspended')audioContext.resume();
+    let o=audioContext.createOscillator(),g=audioContext.createGain(),at=audioContext.currentTime+delay;
+    o.type=wave;o.frequency.setValueAtTime(freq,at);g.gain.setValueAtTime(.001,at);g.gain.exponentialRampToValueAtTime(volume,at+.02);g.gain.exponentialRampToValueAtTime(.001,at+duration);
+    o.connect(g);g.connect(audioContext.destination);o.start(at);o.stop(at+duration+.01)}catch(err){}
+}
+function melody(type){if(type==='key')[[523,0],[659,.105],[784,.21]].forEach(([f,d])=>soundNote(f,.17,'sine',.055,d));
+  if(type==='door')[[290,0],[390,.09],[520,.18]].forEach(([f,d])=>soundNote(f,.19,'triangle',.06,d));
+  if(type==='win')[[523,0],[659,.14],[784,.28],[1046,.42]].forEach(([f,d])=>soundNote(f,.24,'sine',.07,d));
+  if(type==='block')soundNote(185,.075,'triangle',.022);
+}
+function tick(){if(!won)elapsed=Math.floor((Date.now()-startTime)/1000)}
+function startGame(){
+  try{maze=buildMap(selectedSize)}catch(e){toast(e.message,4000);return}
+  player={x:0,y:0,dir:firstFacing(maze)};steps=0;keysMask=0;openedMask=0;won=false;startTime=Date.now();elapsed=0;
+  $('boardSize').textContent=`${selectedSize} × ${selectedSize}`;
+  $('levelTag').textContent=selectedSize===20?'Nível fácil • 1 porta':selectedSize===40?'Nível médio • 2 portas':'Nível difícil • 4 portas';
+  $('validationPill').innerHTML='<span class="dot"></span> Mapa testado ✓';
+  hintDirection=-1;$('hintBubble').classList.add('hidden');clearTimeout(hintTimer);$('modal').hidden=true;
+  refreshStats();toast('✨ Explore o mapa e encontre a primeira chave!',2700);draw();
+}
+function tryMove(d){
+  if(!maze||won||!$('modal').hidden)return;
+  player.dir=d;hintDirection=-1;$('hintBubble').classList.add('hidden');
+  let at=idOf(player.x,player.y,maze.n),nxt=neighbor(at,d,maze.n);
+  if(nxt===-1||maze.walls[at]&DIR[d].bit){melody('block');return}
+  let door=maze.doorEdges.get(edgeKey(at,nxt));
+  if(door!==undefined&&!(openedMask&(1<<door))){
+    if(!(keysMask&(1<<door))){toast(`🔒 A porta ${door+1} está trancada! Encontre a chave ${door+1}.`,2250);melody('block');return}
+    openedMask|=1<<door;toast(`🚪 Você abriu a porta ${door+1}!`,2400);melody('door');
+  }
+  player.x=nxt%maze.n;player.y=Math.floor(nxt/maze.n);steps++;
+  if(maze.keyAt.has(nxt)){
+    let k=maze.keyAt.get(nxt);
+    if(!(keysMask&(1<<k))){keysMask|=1<<k;toast(`🗝️ Chave ${k+1} encontrada! Procure a porta dessa cor.`,2900);melody('key')}
+  }
+  refreshStats();
+  if(nxt===maze.n*maze.n-1){won=true;winTime=elapsed;melody('win');setTimeout(showVictory,320)}
+}
+function showVictory(){if(!won)return;modalMode='win';$('modalEmoji').textContent=theme==='ghost'?'👑':'🌈';$('modalTitle').textContent='Você conseguiu!';
+  $('modalText').textContent=`Você encontrou a saída, abriu ${maze.doors.length} ${maze.doors.length===1?'porta':'portas'} e deu ${steps} passos. Que aventura incrível!`;
+  $('modalButton').textContent='✨ Jogar de novo';$('modal').hidden=false;
+}
+function showHelp(){modalMode='help';$('modalEmoji').textContent=theme==='ghost'?'🗝️':'🦄';$('modalTitle').textContent='Como jogar';
+  $('modalText').textContent='Ande com as setas ou deslize o dedo. Você só vê o que está à frente e ao lado, sem enxergar através de paredes. Explore os becos, pegue cada chave colorida, atravesse a porta correspondente e encontre a saída. A bússola oferece um passo de ajuda!';
+  $('modalButton').textContent='Entendi, vamos jogar!';$('modal').hidden=false;
+}
+function hint(){if(!maze||won)return;
+  let target=-1;
+  for(let k of maze.keys){if(!(keysMask&(1<<k.id))){target=k.at;break}}
+  if(target<0)target=maze.n*maze.n-1;
+  let at=idOf(player.x,player.y,maze.n),path=findPath(maze,at,target,keysMask,false);
+  if(!path||path.length<2){toast('Explore as passagens próximas para continuar.',2200);return}
+  hintDirection=directionFrom(path[0],path[1],maze.n);
+  const arrows=['↑','→','↓','←'];const label=target===maze.n*maze.n-1?'saída':'próxima chave';
+  let bubble=$('hintBubble');bubble.textContent=`🧭 ${arrows[hintDirection]} Siga nesta direção até a ${label}`;bubble.classList.remove('hidden');
+  clearTimeout(hintTimer);hintTimer=setTimeout(()=>{hintDirection=-1;bubble.classList.add('hidden')},4500);
+  soundNote(740,.12,'sine',.05);
+}
+function rayClear(ax,ay,bx,by){
+  let x=ax,y=ay,dx=bx-ax,dy=by-ay,stepX=Math.sign(dx),stepY=Math.sign(dy);
+  let tx=Math.abs(dx)>.0001?.5/Math.abs(dx):Infinity,ty=Math.abs(dy)>.0001?.5/Math.abs(dy):Infinity;
+  let incX=Math.abs(dx)>.0001?1/Math.abs(dx):Infinity,incY=Math.abs(dy)>.0001?1/Math.abs(dy):Infinity;
+  for(let i=0;i<30&&(x!==bx||y!==by);i++){
+    let at=idOf(x,y,maze.n);
+    if(tx<ty-1e-8){let d=stepX>0?1:3;if(maze.walls[at]&DIR[d].bit)return false;
+      let door=maze.doorEdges.get(edgeKey(at,idOf(x+stepX,y,maze.n)));if(door!==undefined&&!(openedMask&(1<<door)))return false;
+      x+=stepX;tx+=incX;
+    }else if(ty<tx-1e-8){let d=stepY>0?2:0;if(maze.walls[at]&DIR[d].bit)return false;
+      let door=maze.doorEdges.get(edgeKey(at,idOf(x,y+stepY,maze.n)));if(door!==undefined&&!(openedMask&(1<<door)))return false;
+      y+=stepY;ty+=incY;
+    }else{
+      if(stepX&&maze.walls[at]&DIR[stepX>0?1:3].bit)return false;
+      if(stepY&&maze.walls[at]&DIR[stepY>0?2:0].bit)return false;
+      if(stepX){let door=maze.doorEdges.get(edgeKey(at,idOf(x+stepX,y,maze.n)));if(door!==undefined&&!(openedMask&(1<<door)))return false}
+      if(stepY){let door=maze.doorEdges.get(edgeKey(at,idOf(x,y+stepY,maze.n)));if(door!==undefined&&!(openedMask&(1<<door)))return false}
+      x+=stepX;y+=stepY;tx+=incX;ty+=incY;
+    }
+  }
+  return x===bx&&y===by;
+}
+function isVisible(x,y){
+  if(x<0||y<0||x>=maze.n||y>=maze.n)return false;
+  let dx=x-player.x,dy=y-player.y,dist=Math.hypot(dx,dy);
+  if(dist===0)return true;if(dist>5.25)return false;
+  let dot=(dx*DIR[player.dir].dx+dy*DIR[player.dir].dy)/dist;
+  if(dot<-.01)return false; // Nothing behind the character, even if previously seen.
+  if(dist>1.07&&dot<.39)return false; // ~134° cone ahead, plus the immediate side tiles.
+  return rayClear(player.x,player.y,x,y);
+}
+function hash(x,y,s=0){let z=((x+17)*374761393+(y+47)*668265263+s*1442695041)|0;z=Math.imul(z^(z>>>13),1274126177);return ((z^(z>>>16))>>>0)/4294967296}
+function roundedRect(c,x,y,w,h,r){c.beginPath();c.roundRect(x,y,w,h,r)}
+function floorTile(x,y,sx,sy,t,dist){
+  let isUnicorn=theme==='unicorn',v=hash(x,y),c=isUnicorn?(v>.64?'#274e54':v>.30?'#244247':'#223e48'):(v>.65?'#29334a':v>.33?'#273047':'#242b40');
+  ctx.fillStyle=c;ctx.fillRect(sx,sy,t+.7,t+.7);
+  if(isUnicorn){
+    if(hash(x,y,3)>.42){ctx.fillStyle='#48746966';ctx.beginPath();ctx.ellipse(sx+t*.35,sy+t*.63,t*.19,t*.1,-.3,0,Math.PI*2);ctx.fill()}
+    if(hash(x,y,7)>.72){let px=sx+t*.72,py=sy+t*.32;ctx.fillStyle='#ffd2f2b0';for(let i=0;i<5;i++){let a=i*Math.PI*2/5;ctx.beginPath();ctx.arc(px+Math.cos(a)*t*.043,py+Math.sin(a)*t*.043,t*.033,0,Math.PI*2);ctx.fill()}ctx.fillStyle='#ffe17c';ctx.beginPath();ctx.arc(px,py,t*.027,0,Math.PI*2);ctx.fill()}
+  }else{
+    ctx.strokeStyle='#94a0bd22';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(sx+t*.14,sy+t*.15);ctx.lineTo(sx+t*.50,sy+t*.15);ctx.lineTo(sx+t*.57,sy+t*.24);ctx.stroke();
+    if(hash(x,y,10)>.7){ctx.fillStyle='#bbced524';ctx.beginPath();ctx.arc(sx+t*.77,sy+t*.68,t*.034,0,Math.PI*2);ctx.fill()}
+  }
+  // Light visibly fades with distance but never penetrates a closed wall.
+  let shadow=.03+Math.max(0,(dist-1)/5)*.58;
+  ctx.fillStyle=`rgba(5,8,23,${Math.min(.78,shadow)})`;ctx.fillRect(sx,sy,t+.7,t+.7);
+}
+function drawWall(x1,y1,x2,y2,t){
+  ctx.lineCap='round';ctx.strokeStyle=theme==='ghost'?'#0f1529':'#142b3d';ctx.lineWidth=t*.19;ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();
+  ctx.strokeStyle=theme==='ghost'?'#8193b1':'#78b2b8';ctx.lineWidth=t*.12;ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();
+  ctx.strokeStyle=theme==='ghost'?'#acb6ce55':'#a1dfc45d';ctx.lineWidth=Math.max(1,t*.021);ctx.beginPath();ctx.moveTo(x1,y1-t*.037);ctx.lineTo(x2,y2-t*.037);ctx.stroke();
+}
+function drawKey(cx,cy,t,color,clock){
+  ctx.save();ctx.translate(cx,cy+Math.sin(clock/380+cx)*t*.03);ctx.shadowColor=color;ctx.shadowBlur=t*.22;
+  ctx.strokeStyle='#372b44';ctx.lineWidth=t*.17;ctx.lineCap='round';ctx.beginPath();ctx.arc(-t*.07,-t*.15,t*.115,0,Math.PI*2);ctx.moveTo(0,-t*.07);ctx.lineTo(t*.17,t*.14);ctx.lineTo(t*.27,t*.09);ctx.moveTo(t*.13,t*.09);ctx.lineTo(t*.21,t*.02);ctx.stroke();
+  ctx.strokeStyle=color;ctx.lineWidth=t*.105;ctx.beginPath();ctx.arc(-t*.07,-t*.15,t*.115,0,Math.PI*2);ctx.moveTo(0,-t*.07);ctx.lineTo(t*.17,t*.14);ctx.lineTo(t*.27,t*.09);ctx.moveTo(t*.13,t*.09);ctx.lineTo(t*.21,t*.02);ctx.stroke();
+  ctx.restore();
+}
+function drawExit(cx,cy,t,clock){
+  let pulse=1+Math.sin(clock/250)*.1;ctx.save();ctx.translate(cx,cy);ctx.shadowColor=theme==='ghost'?'#ffd781':'#ffc3e6';ctx.shadowBlur=t*.52;
+  ctx.fillStyle='#f8d98522';ctx.beginPath();ctx.arc(0,0,t*.36*pulse,0,Math.PI*2);ctx.fill();
+  ctx.rotate(clock/1900);ctx.fillStyle=theme==='ghost'?'#ffe395':'#ffcded';ctx.beginPath();
+  for(let k=0;k<10;k++){let a=-Math.PI/2+k*Math.PI/5,r=k%2===0?t*.28:t*.115;ctx.lineTo(Math.cos(a)*r,Math.sin(a)*r)}ctx.closePath();ctx.fill();ctx.restore();
+}
+function drawGhost(cx,cy,t,dir,clock){
+  ctx.save();ctx.translate(cx,cy+Math.sin(clock/290)*t*.027);ctx.rotate(dir*Math.PI/2);ctx.scale(t,t);
+  ctx.shadowColor='#82d9ff';ctx.shadowBlur=t*.29;
+  ctx.fillStyle='#e6faff';ctx.strokeStyle='#99d6f3';ctx.lineWidth=.035;
+  ctx.beginPath();ctx.moveTo(-.265,.27);ctx.lineTo(-.265,-.08);ctx.bezierCurveTo(-.27,-.46,.27,-.46,.265,-.08);ctx.lineTo(.265,.27);ctx.quadraticCurveTo(.17,.17,.085,.29);ctx.quadraticCurveTo(0,.40,-.08,.285);ctx.quadraticCurveTo(-.16,.19,-.265,.27);ctx.closePath();ctx.fill();ctx.stroke();ctx.shadowBlur=0;
+  ctx.fillStyle='#243354';ctx.beginPath();ctx.ellipse(-.105,-.08,.048,.075,0,0,Math.PI*2);ctx.ellipse(.105,-.08,.048,.075,0,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='#f8a9b9';ctx.beginPath();ctx.arc(-.19,.045,.045,0,Math.PI*2);ctx.arc(.19,.045,.045,0,Math.PI*2);ctx.fill();
+  ctx.strokeStyle='#556589';ctx.lineWidth=.025;ctx.beginPath();ctx.arc(0,.035,.06,0,Math.PI);ctx.stroke();
+  // A tiny crown gives the ghost its medieval character.
+  ctx.fillStyle='#fbd478';ctx.strokeStyle='#fff2ba';ctx.lineWidth=.018;ctx.beginPath();ctx.moveTo(-.18,-.33);ctx.lineTo(-.19,-.49);ctx.lineTo(-.065,-.41);ctx.lineTo(0,-.56);ctx.lineTo(.08,-.41);ctx.lineTo(.19,-.50);ctx.lineTo(.18,-.32);ctx.closePath();ctx.fill();ctx.stroke();
+  ctx.restore();
+}
+function drawUnicorn(cx,cy,t,dir,clock){
+  ctx.save();ctx.translate(cx,cy+Math.sin(clock/300)*t*.025);ctx.rotate(dir*Math.PI/2);ctx.scale(t,t);
+  ctx.shadowColor='#f5b3df';ctx.shadowBlur=t*.23;
+  ctx.fillStyle='#d3a5f9';ctx.beginPath();ctx.moveTo(-.19,.15);ctx.quadraticCurveTo(-.43,.30,-.32,.44);ctx.quadraticCurveTo(-.10,.34,-.07,.23);ctx.fill();
+  ctx.fillStyle='#f5e9ff';ctx.strokeStyle='#bda7e0';ctx.lineWidth=.028;ctx.beginPath();ctx.ellipse(0,.05,.24,.33,0,0,Math.PI*2);ctx.fill();ctx.stroke();
+  ctx.beginPath();ctx.ellipse(-.215,-.18,.095,.15,-.25,0,Math.PI*2);ctx.ellipse(.215,-.18,.095,.15,.25,0,Math.PI*2);ctx.fill();ctx.stroke();
+  ctx.fillStyle='#f8efff';ctx.beginPath();ctx.ellipse(0,-.05,.235,.245,0,0,Math.PI*2);ctx.fill();ctx.stroke();ctx.shadowBlur=0;
+  ctx.fillStyle='#ef94c4';ctx.beginPath();ctx.moveTo(-.23,-.34);ctx.quadraticCurveTo(-.32,-.05,-.16,.05);ctx.lineTo(-.06,-.3);ctx.closePath();ctx.fill();
+  ctx.fillStyle='#8ad9d7';ctx.beginPath();ctx.moveTo(-.16,-.38);ctx.quadraticCurveTo(-.05,-.17,.06,-.14);ctx.lineTo(.04,-.39);ctx.closePath();ctx.fill();
+  ctx.fillStyle='#fbd47d';ctx.strokeStyle='#f9e8ae';ctx.lineWidth=.02;ctx.beginPath();ctx.moveTo(.02,-.24);ctx.lineTo(.10,-.59);ctx.lineTo(.17,-.21);ctx.closePath();ctx.fill();ctx.stroke();
+  ctx.fillStyle='#304164';ctx.beginPath();ctx.arc(-.095,-.055,.041,0,Math.PI*2);ctx.arc(.095,-.055,.041,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='#efb5c6';ctx.beginPath();ctx.arc(-.174,.055,.049,0,Math.PI*2);ctx.arc(.174,.055,.049,0,Math.PI*2);ctx.fill();ctx.restore();
+}
+function drawDoor(door,t,visible,clock){
+  let a=xyOf(door.from,maze.n),b=xyOf(door.to,maze.n);
+  if(!visible[door.from]&&!visible[door.to])return;
+  let ox=VIEW/2-player.x-.5,oy=VIEW/2-player.y-.5;
+  let vertical=a.y===b.y;
+  let x=vertical?(Math.max(a.x,b.x)+ox)*t:(a.x+ox)*t;
+  let y=vertical?(a.y+oy)*t:(Math.max(a.y,b.y)+oy)*t;
+  let x1=vertical?x:x+t*.18,y1=vertical?y+t*.18:y;
+  let x2=vertical?x:x+t*.82,y2=vertical?y+t*.82:y;
+  let color=COLORS[door.id],open=Boolean(openedMask&(1<<door.id));
+  ctx.save();ctx.lineCap='round';
+  if(open){ctx.strokeStyle=color+'70';ctx.lineWidth=t*.055;ctx.setLineDash([t*.07,t*.08]);ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();ctx.setLineDash([])}
+  else{
+    ctx.strokeStyle='#1a1224';ctx.lineWidth=t*.23;ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();
+    ctx.strokeStyle=color;ctx.lineWidth=t*.15;ctx.shadowColor=color;ctx.shadowBlur=t*.15;ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();ctx.shadowBlur=0;
+    ctx.fillStyle='#39263a';ctx.strokeStyle='#fff2cd';ctx.lineWidth=t*.028;ctx.beginPath();ctx.arc((x1+x2)/2,(y1+y2)/2,t*.125,0,Math.PI*2);ctx.fill();ctx.stroke();
+    ctx.fillStyle='#fff6da';ctx.font=`900 ${Math.max(9,t*.15)}px Nunito`;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(String(door.id+1),(x1+x2)/2,(y1+y2)/2+1);
+  }
+  ctx.restore();
+}
+function draw(){
+  if(!maze)return;
+  let cw=canvas.clientWidth;if(!cw)return;
+  let dpr=Math.min(window.devicePixelRatio||1,2);let physical=Math.round(cw*dpr);
+  if(canvas.width!==physical||canvas.height!==physical){canvas.width=physical;canvas.height=physical}
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  const t=cw/VIEW,ox=VIEW/2-player.x-.5,oy=VIEW/2-player.y-.5;
+  ctx.fillStyle=theme==='ghost'?'#090f20':'#10182c';ctx.fillRect(0,0,cw,cw);
+  // Ambient dust in the darkness: atmosphere only, never revealing a hidden wall or passage.
+  for(let fy=0;fy<VIEW;fy++)for(let fx=0;fx<VIEW;fx++){
+    const h=hash(fx,fy,31),x=(fx+.14+hash(fx,fy,32)*.72)*t,y=(fy+.12+hash(fx,fy,33)*.76)*t;
+    if(h>.46){ctx.fillStyle=theme==='ghost'?'#6d88bd1b':'#a88ccc1c';ctx.beginPath();ctx.arc(x,y,t*(.007+h*.014),0,Math.PI*2);ctx.fill()}
+    if(h>.9){ctx.strokeStyle=theme==='ghost'?'#9cb9d817':'#f0c6e019';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(x-t*.05,y);ctx.lineTo(x+t*.05,y);ctx.moveTo(x,y-t*.05);ctx.lineTo(x,y+t*.05);ctx.stroke()}
+  }
+  const visible=new Uint8Array(maze.n*maze.n),minX=Math.max(0,Math.floor(player.x-6)),maxX=Math.min(maze.n-1,Math.ceil(player.x+6)),minY=Math.max(0,Math.floor(player.y-6)),maxY=Math.min(maze.n-1,Math.ceil(player.y+6));
+  for(let y=minY;y<=maxY;y++)for(let x=minX;x<=maxX;x++){
+    if(!isVisible(x,y))continue;
+    let i=idOf(x,y,maze.n);visible[i]=1;
+    floorTile(x,y,(x+ox)*t,(y+oy)*t,t,Math.hypot(player.x-x,player.y-y));
+  }
+  ctx.save();
+  for(let y=minY;y<=maxY;y++)for(let x=minX;x<=maxX;x++){
+    let idx=idOf(x,y,maze.n);if(!visible[idx])continue;
+    let sx=(x+ox)*t,sy=(y+oy)*t,mask=maze.walls[idx];
+    if(mask&N)drawWall(sx,sy,sx+t,sy,t);
+    if(mask&E)drawWall(sx+t,sy,sx+t,sy+t,t);
+    if(mask&S)drawWall(sx,sy+t,sx+t,sy+t,t);
+    if(mask&W)drawWall(sx,sy,sx,sy+t,t);
+  }
+  for(let door of maze.doors)drawDoor(door,t,visible,animClock);
+  for(let k of maze.keys){if(keysMask&(1<<k.id)||!visible[k.at])continue;let p=xyOf(k.at,maze.n);drawKey((p.x+ox+.5)*t,(p.y+oy+.5)*t,t,COLORS[k.id],animClock)}
+  if(visible[maze.n*maze.n-1])drawExit((maze.n-1+ox+.5)*t,(maze.n-1+oy+.5)*t,t,animClock);
+  ctx.restore();
+  let center=cw/2;
+  ctx.save();ctx.globalAlpha=.3;ctx.fillStyle=theme==='ghost'?'#9edffd':'#ffc9e9';ctx.beginPath();ctx.ellipse(center,center+t*.18,t*.25,t*.11,0,0,Math.PI*2);ctx.fill();ctx.restore();
+  if(theme==='ghost')drawGhost(center,center,t,player.dir,animClock);else drawUnicorn(center,center,t,player.dir,animClock);
+  // Optional hint points to only the next legal step, never reveals the map.
+  if(hintDirection>=0){let a=[-Math.PI/2,0,Math.PI/2,Math.PI][hintDirection],px=center+Math.cos(a)*t*.72,py=center+Math.sin(a)*t*.72;
+    ctx.save();ctx.translate(px,py);ctx.rotate(a+Math.PI/2);ctx.fillStyle='#ffe69c';ctx.shadowColor='#ffd480';ctx.shadowBlur=t*.2;ctx.beginPath();ctx.moveTo(0,-t*.16);ctx.lineTo(t*.11,t*.04);ctx.lineTo(-t*.11,t*.04);ctx.closePath();ctx.fill();ctx.restore()}
+  let g=ctx.createRadialGradient(center,center,cw*.18,center,center,cw*.75);g.addColorStop(0,'#02071500');g.addColorStop(1,'#0508167f');ctx.fillStyle=g;ctx.fillRect(0,0,cw,cw);
+}
+let previousFrame=0;
+function animate(time){if(time-previousFrame>=42){animClock=time;draw();previousFrame=time}requestAnimationFrame(animate)}
+// Settings change what will be generated next; the new map is created immediately.
+document.querySelectorAll('[data-theme-choice]').forEach(b=>b.addEventListener('click',()=>{
+  theme=b.dataset.themeChoice;document.body.dataset.theme=theme;
+  document.querySelectorAll('[data-theme-choice]').forEach(el=>{let active=el===b;el.classList.toggle('active',active);el.setAttribute('aria-pressed',String(active))});
+  $('brandIcon').textContent=theme==='ghost'?'👻':'🦄';$('gameTitle').textContent=theme==='ghost'?'Castelo dos Sussurros':'Reino do Arco-Íris';$('mapLabel').textContent=theme==='ghost'?'Aventura medieval':'Mundo encantado';startGame();
+}));
+document.querySelectorAll('[data-size]').forEach(b=>b.addEventListener('click',()=>{
+  selectedSize=Number(b.dataset.size);
+  document.querySelectorAll('[data-size]').forEach(el=>{let active=el===b;el.classList.toggle('active',active);el.setAttribute('aria-pressed',String(active))});
+  startGame();
+}));
+$('newGame').addEventListener('click',startGame);$('hintBtn').addEventListener('click',hint);$('helpBtn').addEventListener('click',showHelp);
+$('modalButton').addEventListener('click',()=>{if(modalMode==='help')$('modal').hidden=true;else startGame()});
+$('soundBtn').addEventListener('click',()=>{sound=!sound;$('soundBtn').textContent=sound?'🔊 Som on':'🔇 Som off';$('soundBtn').setAttribute('aria-pressed',String(sound));if(sound)soundNote(660,.15)});
+const keyDir={ArrowUp:0,ArrowRight:1,ArrowDown:2,ArrowLeft:3,w:0,d:1,s:2,a:3,W:0,D:1,S:2,A:3};
+document.addEventListener('keydown',e=>{let d=keyDir[e.key];if(d===undefined)return;if(e.target?.tagName==='INPUT'||e.target?.tagName==='SELECT')return;e.preventDefault();tryMove(d)});
+let padInterval=null,padTimer=null;
+function stopPad(){clearTimeout(padTimer);clearInterval(padInterval);padTimer=null;padInterval=null;document.querySelectorAll('.arrow-btn').forEach(el=>el.classList.remove('pressed'))}
+document.querySelectorAll('.arrow-btn').forEach(b=>{
+  b.addEventListener('pointerdown',e=>{e.preventDefault();stopPad();let d=Number(b.dataset.dir);b.classList.add('pressed');b.setPointerCapture?.(e.pointerId);tryMove(d);padTimer=setTimeout(()=>{padInterval=setInterval(()=>tryMove(d),155)},300)});
+  b.addEventListener('pointerup',stopPad);b.addEventListener('pointercancel',stopPad);b.addEventListener('lostpointercapture',stopPad);
+});
+let touchStart=null;
+canvas.addEventListener('pointerdown',e=>{if(e.pointerType==='mouse'&&e.button!==0)return;touchStart={x:e.clientX,y:e.clientY};canvas.setPointerCapture?.(e.pointerId)});
+canvas.addEventListener('pointerup',e=>{if(!touchStart)return;const dx=e.clientX-touchStart.x,dy=e.clientY-touchStart.y;touchStart=null;
+  if(Math.max(Math.abs(dx),Math.abs(dy))<16){let r=canvas.getBoundingClientRect();let x=e.clientX-r.left-r.width/2,y=e.clientY-r.top-r.height/2; if(Math.max(Math.abs(x),Math.abs(y))<r.width*.1)return;tryMove(Math.abs(x)>Math.abs(y)?(x>0?1:3):(y>0?2:0));return}
+  tryMove(Math.abs(dx)>Math.abs(dy)?(dx>0?1:3):(dy>0?2:0));
+});
+canvas.addEventListener('pointercancel',()=>touchStart=null);
+window.addEventListener('blur',stopPad);
+// Programmatic check: each freshly generated map is solved with a key-inventory BFS.
+window.__mazeLabTest={buildMap,validate,findPath,getState:()=>({maze,player:{...player},keysMask,openedMask,won,steps}),move:tryMove};
+startGame();requestAnimationFrame(animate);
+setInterval(tick,1000);
+})();
+</script>
+</body>
+</html>
