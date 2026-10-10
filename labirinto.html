@@ -108,7 +108,7 @@
         <div id="hintBubble" class="hint-bubble hidden" role="status"></div>
         <div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
       </div>
-      <div class="board-footer"><div class="foot-note"><svg viewBox="0 0 24 24"><path d="M12 2v20M2 12h20M12 2l3 7-3 3-3-3zM22 12l-7 3-3-3 3-3zM12 22l-3-7 3-3 3 3zM2 12l7-3 3 3-3 3z"/></svg><span>Só é possível enxergar para a frente</span></div><span id="levelTag">Nível fácil</span></div>
+      <div class="board-footer"><div class="foot-note"><svg viewBox="0 0 24 24"><path d="M12 2v20M2 12h20M12 2l3 7-3 3-3-3zM22 12l-7 3-3-3 3-3zM12 22l-3-7 3-3 3 3zM2 12l7-3 3 3-3 3z"/></svg><span>Mapa fixo • visão apenas à frente</span></div><span id="levelTag">Nível fácil</span></div>
     </section>
     <aside class="side">
       <div class="panel settings-card">
@@ -143,7 +143,7 @@
           <button type="button" class="arrow-btn" data-dir="1" aria-label="Ir para direita">→</button>
         </div>
         <div class="tools"><button type="button" id="hintBtn" class="secondary">🧭 Pedir uma dica</button><button type="button" id="helpBtn" class="secondary">❔ Como jogar</button></div>
-        <p class="instructions">Use as <kbd>↑</kbd> <kbd>↓</kbd> <kbd>←</kbd> <kbd>→</kbd> ou <kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd>. No celular, use os botões ou deslize o dedo no mapa. Segure um botão para caminhar.</p>
+        <p class="instructions">Use as <kbd>↑</kbd> <kbd>↓</kbd> <kbd>←</kbd> <kbd>→</kbd> ou <kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd>. No celular, use os botões, deslize o dedo no mapa ou toque ao redor do personagem. Segure um botão para caminhar.</p>
       </div>
     </aside>
   </main>
@@ -159,9 +159,12 @@ const COLORS=['#ffd06d','#69e0ef','#ef9ccf','#9de99e'];
 const canvas=document.getElementById('mazeCanvas'),ctx=canvas.getContext('2d',{alpha:false}),wrap=document.getElementById('boardWrap');
 let selectedSize=20,theme='ghost',maze=null,player=null,steps=0,keysMask=0,openedMask=0,won=false,elapsed=0,startTime=0,winTime=0;
 let sound=false,audioContext=null,toastTimer=0,hintTimer=0,hintDirection=-1,modalMode='win',animClock=0;
+let spriteFrom={x:0,y:0},spriteStart=0;
 const $=id=>document.getElementById(id);
-const VIEW=7;
+// Todo o labirinto fica fixo no tabuleiro: cada célula sempre ocupa o mesmo lugar.
+// O personagem percorre esse espaço; somente a área iluminada se altera.
 const idOf=(x,y,n)=>y*n+x;
+const startOf=n=>idOf(Math.floor(n/2),Math.floor(n/2),n);
 const xyOf=(i,n)=>({x:i%n,y:Math.floor(i/n)});
 const countBits=n=>{let c=0;while(n){n&=n-1;c++}return c};
 const edgeKey=(a,b)=>a<b?a+':'+b:b+':'+a;
@@ -170,7 +173,7 @@ function neighbor(id,d,n){let x=id%n,y=Math.floor(id/n);x+=DIR[d].dx;y+=DIR[d].d
 function neighborsOpen(m,id){let list=[];for(let d=0;d<4;d++){let to=neighbor(id,d,m.n);if(to>=0&&!(m.walls[id]&DIR[d].bit))list.push({to,d})}return list}
 function generateTree(n){
   const cells=n*n,walls=new Uint8Array(cells);walls.fill(15);
-  const seen=new Uint8Array(cells),stack=[0];seen[0]=1;
+  const seen=new Uint8Array(cells),start=startOf(n),stack=[start];seen[start]=1;
   while(stack.length){let a=stack[stack.length-1],options=[];for(let d=0;d<4;d++){let b=neighbor(a,d,n);if(b>=0&&!seen[b])options.push({b,d})}
     if(!options.length){stack.pop();continue}
     let pick=options[Math.floor(Math.random()*options.length)];walls[a]&=~DIR[pick.d].bit;walls[pick.b]&=~DIR[pick.d].op;seen[pick.b]=1;stack.push(pick.b);
@@ -189,7 +192,7 @@ function findPath(m,a,b,mask=15,ignoreDoors=false){
   const path=[];for(let at=b;at!==a;at=parent[at])path.push(at);path.push(a);path.reverse();return path;
 }
 function setGatesAndKeys(m,doorCount){
-  let path=findPath(m,0,m.n*m.n-1,15,true);if(!path)return false;
+  let path=findPath(m,startOf(m.n),m.n*m.n-1,15,true);if(!path)return false;
   m.path=path;
   let gatePositions=[];
   for(let i=0;i<doorCount;i++){
@@ -229,8 +232,9 @@ function validate(m){
   const visited=new Uint8Array(size*(1<<m.keys.length));
   const qPos=new Int32Array(visited.length),qMask=new Uint8Array(visited.length);
   let head=0,tail=0,mask0=0;
-  if(m.keyAt.has(0))mask0|=1<<m.keyAt.get(0);
-  qPos[tail]=0;qMask[tail++]=mask0;visited[mask0*size]=1;
+  const start=startOf(m.n);
+  if(m.keyAt.has(start))mask0|=1<<m.keyAt.get(start);
+  qPos[tail]=start;qMask[tail++]=mask0;visited[mask0*size+start]=1;
   while(head<tail){let at=qPos[head],mask=qMask[head++];if(at===size-1&&mask===all)return true;
     for(let {to} of neighborsOpen(m,at)){
       let door=m.doorEdges.get(edgeKey(at,to));if(door!==undefined&&!(mask&(1<<door)))continue;
@@ -244,7 +248,7 @@ function validate(m){
 function buildMap(n){
   const count=n===20?1:n===40?2:4;
   for(let attempt=0;attempt<25;attempt++){
-    let m=generateTree(n);let naturalPath=findPath(m,0,n*n-1,15,true);
+    let m=generateTree(n);let naturalPath=findPath(m,startOf(n),n*n-1,15,true);
     let minimum=n===20?65:n===40?205:450;
     if(naturalPath.length<minimum&&attempt<19)continue;
     if(!setGatesAndKeys(m,count))continue;
@@ -283,12 +287,13 @@ function melody(type){if(type==='key')[[523,0],[659,.105],[784,.21]].forEach(([f
 function tick(){if(!won)elapsed=Math.floor((Date.now()-startTime)/1000)}
 function startGame(){
   try{maze=buildMap(selectedSize)}catch(e){toast(e.message,4000);return}
-  player={x:0,y:0,dir:firstFacing(maze)};steps=0;keysMask=0;openedMask=0;won=false;startTime=Date.now();elapsed=0;
+  const start=xyOf(startOf(maze.n),maze.n);
+  player={x:start.x,y:start.y,dir:firstFacing(maze)};spriteFrom={...start};spriteStart=0;steps=0;keysMask=0;openedMask=0;won=false;startTime=Date.now();elapsed=0;
   $('boardSize').textContent=`${selectedSize} × ${selectedSize}`;
   $('levelTag').textContent=selectedSize===20?'Nível fácil • 1 porta':selectedSize===40?'Nível médio • 2 portas':'Nível difícil • 4 portas';
   $('validationPill').innerHTML='<span class="dot"></span> Mapa testado ✓';
   hintDirection=-1;$('hintBubble').classList.add('hidden');clearTimeout(hintTimer);$('modal').hidden=true;
-  refreshStats();toast('✨ Explore o mapa e encontre a primeira chave!',2700);draw();
+  refreshStats();toast('✨ Encontre as chaves e saia do labirinto!',2200);draw();
 }
 function tryMove(d){
   if(!maze||won||!$('modal').hidden)return;
@@ -300,6 +305,9 @@ function tryMove(d){
     if(!(keysMask&(1<<door))){toast(`🔒 A porta ${door+1} está trancada! Encontre a chave ${door+1}.`,2250);melody('block');return}
     openedMask|=1<<door;toast(`🚪 Você abriu a porta ${door+1}!`,2400);melody('door');
   }
+  // A transição anima apenas o personagem, nunca desloca o tabuleiro.
+  const now=performance.now(),smooth=spritePosition(now);
+  spriteFrom={x:smooth.x,y:smooth.y};spriteStart=now;
   player.x=nxt%maze.n;player.y=Math.floor(nxt/maze.n);steps++;
   if(maze.keyAt.has(nxt)){
     let k=maze.keyAt.get(nxt);
@@ -313,7 +321,7 @@ function showVictory(){if(!won)return;modalMode='win';$('modalEmoji').textConten
   $('modalButton').textContent='✨ Jogar de novo';$('modal').hidden=false;
 }
 function showHelp(){modalMode='help';$('modalEmoji').textContent=theme==='ghost'?'🗝️':'🦄';$('modalTitle').textContent='Como jogar';
-  $('modalText').textContent='Ande com as setas ou deslize o dedo. Você só vê o que está à frente e ao lado, sem enxergar através de paredes. Explore os becos, pegue cada chave colorida, atravesse a porta correspondente e encontre a saída. A bússola oferece um passo de ajuda!';
+  $('modalText').textContent='Ande com as setas ou deslize o dedo. O mapa não se move: o personagem muda de posição. Você só vê o que está à frente e ao lado, sem enxergar através de paredes. Explore os becos, pegue cada chave colorida, atravesse a porta correspondente e encontre a saída. A bússola oferece um passo de ajuda!';
   $('modalButton').textContent='Entendi, vamos jogar!';$('modal').hidden=false;
 }
 function hint(){if(!maze||won)return;
@@ -350,10 +358,11 @@ function rayClear(ax,ay,bx,by){
   }
   return x===bx&&y===by;
 }
+function sightRadius(){return maze.n===20?6.25:maze.n===40?8.5:11.5}
 function isVisible(x,y){
   if(x<0||y<0||x>=maze.n||y>=maze.n)return false;
   let dx=x-player.x,dy=y-player.y,dist=Math.hypot(dx,dy);
-  if(dist===0)return true;if(dist>5.25)return false;
+  if(dist===0)return true;if(dist>sightRadius())return false;
   let dot=(dx*DIR[player.dir].dx+dy*DIR[player.dir].dy)/dist;
   if(dot<-.01)return false; // Nothing behind the character, even if previously seen.
   if(dist>1.07&&dot<.39)return false; // ~134° cone ahead, plus the immediate side tiles.
@@ -364,6 +373,7 @@ function roundedRect(c,x,y,w,h,r){c.beginPath();c.roundRect(x,y,w,h,r)}
 function floorTile(x,y,sx,sy,t,dist){
   let isUnicorn=theme==='unicorn',v=hash(x,y),c=isUnicorn?(v>.64?'#274e54':v>.30?'#244247':'#223e48'):(v>.65?'#29334a':v>.33?'#273047':'#242b40');
   ctx.fillStyle=c;ctx.fillRect(sx,sy,t+.7,t+.7);
+  if(t<10)return; // Em tabuleiros grandes, detalhes de poucos pixels não poluem o desenho.
   if(isUnicorn){
     if(hash(x,y,3)>.42){ctx.fillStyle='#48746966';ctx.beginPath();ctx.ellipse(sx+t*.35,sy+t*.63,t*.19,t*.1,-.3,0,Math.PI*2);ctx.fill()}
     if(hash(x,y,7)>.72){let px=sx+t*.72,py=sy+t*.32;ctx.fillStyle='#ffd2f2b0';for(let i=0;i<5;i++){let a=i*Math.PI*2/5;ctx.beginPath();ctx.arc(px+Math.cos(a)*t*.043,py+Math.sin(a)*t*.043,t*.033,0,Math.PI*2);ctx.fill()}ctx.fillStyle='#ffe17c';ctx.beginPath();ctx.arc(px,py,t*.027,0,Math.PI*2);ctx.fill()}
@@ -376,17 +386,24 @@ function floorTile(x,y,sx,sy,t,dist){
   ctx.fillStyle=`rgba(5,8,23,${Math.min(.78,shadow)})`;ctx.fillRect(sx,sy,t+.7,t+.7);
 }
 function drawWall(x1,y1,x2,y2,t){
-  ctx.lineCap='round';ctx.strokeStyle=theme==='ghost'?'#0f1529':'#142b3d';ctx.lineWidth=t*.19;ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();
-  ctx.strokeStyle=theme==='ghost'?'#8193b1':'#78b2b8';ctx.lineWidth=t*.12;ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();
+  ctx.lineCap='round';ctx.strokeStyle=theme==='ghost'?'#0f1529':'#142b3d';ctx.lineWidth=Math.max(1.25,t*.19);ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();
+  ctx.strokeStyle=theme==='ghost'?'#8193b1':'#78b2b8';ctx.lineWidth=Math.max(.8,t*.12);ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();
+  if(t<11)return;
   ctx.strokeStyle=theme==='ghost'?'#acb6ce55':'#a1dfc45d';ctx.lineWidth=Math.max(1,t*.021);ctx.beginPath();ctx.moveTo(x1,y1-t*.037);ctx.lineTo(x2,y2-t*.037);ctx.stroke();
 }
 function drawKey(cx,cy,t,color,clock){
+  if(t<13){ // Gema luminosa nítida mesmo num labirinto de 60×60.
+    ctx.save();ctx.shadowColor=color;ctx.shadowBlur=8;ctx.fillStyle=color;
+    ctx.beginPath();ctx.arc(cx,cy,Math.max(3.2,t*.42),0,Math.PI*2);ctx.fill();
+    ctx.shadowBlur=0;ctx.fillStyle='#fff9ed';ctx.beginPath();ctx.arc(cx,cy,1.4,0,Math.PI*2);ctx.fill();ctx.restore();return;
+  }
   ctx.save();ctx.translate(cx,cy+Math.sin(clock/380+cx)*t*.03);ctx.shadowColor=color;ctx.shadowBlur=t*.22;
   ctx.strokeStyle='#372b44';ctx.lineWidth=t*.17;ctx.lineCap='round';ctx.beginPath();ctx.arc(-t*.07,-t*.15,t*.115,0,Math.PI*2);ctx.moveTo(0,-t*.07);ctx.lineTo(t*.17,t*.14);ctx.lineTo(t*.27,t*.09);ctx.moveTo(t*.13,t*.09);ctx.lineTo(t*.21,t*.02);ctx.stroke();
   ctx.strokeStyle=color;ctx.lineWidth=t*.105;ctx.beginPath();ctx.arc(-t*.07,-t*.15,t*.115,0,Math.PI*2);ctx.moveTo(0,-t*.07);ctx.lineTo(t*.17,t*.14);ctx.lineTo(t*.27,t*.09);ctx.moveTo(t*.13,t*.09);ctx.lineTo(t*.21,t*.02);ctx.stroke();
   ctx.restore();
 }
 function drawExit(cx,cy,t,clock){
+  t=Math.max(12,t);
   let pulse=1+Math.sin(clock/250)*.1;ctx.save();ctx.translate(cx,cy);ctx.shadowColor=theme==='ghost'?'#ffd781':'#ffc3e6';ctx.shadowBlur=t*.52;
   ctx.fillStyle='#f8d98522';ctx.beginPath();ctx.arc(0,0,t*.36*pulse,0,Math.PI*2);ctx.fill();
   ctx.rotate(clock/1900);ctx.fillStyle=theme==='ghost'?'#ffe395':'#ffcded';ctx.beginPath();
@@ -420,63 +437,89 @@ function drawUnicorn(cx,cy,t,dir,clock){
 function drawDoor(door,t,visible,clock){
   let a=xyOf(door.from,maze.n),b=xyOf(door.to,maze.n);
   if(!visible[door.from]&&!visible[door.to])return;
-  let ox=VIEW/2-player.x-.5,oy=VIEW/2-player.y-.5;
   let vertical=a.y===b.y;
-  let x=vertical?(Math.max(a.x,b.x)+ox)*t:(a.x+ox)*t;
-  let y=vertical?(a.y+oy)*t:(Math.max(a.y,b.y)+oy)*t;
+  let x=vertical?Math.max(a.x,b.x)*t:a.x*t;
+  let y=vertical?a.y*t:Math.max(a.y,b.y)*t;
   let x1=vertical?x:x+t*.18,y1=vertical?y+t*.18:y;
   let x2=vertical?x:x+t*.82,y2=vertical?y+t*.82:y;
   let color=COLORS[door.id],open=Boolean(openedMask&(1<<door.id));
   ctx.save();ctx.lineCap='round';
   if(open){ctx.strokeStyle=color+'70';ctx.lineWidth=t*.055;ctx.setLineDash([t*.07,t*.08]);ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();ctx.setLineDash([])}
   else{
-    ctx.strokeStyle='#1a1224';ctx.lineWidth=t*.23;ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();
-    ctx.strokeStyle=color;ctx.lineWidth=t*.15;ctx.shadowColor=color;ctx.shadowBlur=t*.15;ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();ctx.shadowBlur=0;
-    ctx.fillStyle='#39263a';ctx.strokeStyle='#fff2cd';ctx.lineWidth=t*.028;ctx.beginPath();ctx.arc((x1+x2)/2,(y1+y2)/2,t*.125,0,Math.PI*2);ctx.fill();ctx.stroke();
-    ctx.fillStyle='#fff6da';ctx.font=`900 ${Math.max(9,t*.15)}px Nunito`;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(String(door.id+1),(x1+x2)/2,(y1+y2)/2+1);
+    ctx.strokeStyle='#1a1224';ctx.lineWidth=Math.max(2.5,t*.23);ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();
+    ctx.strokeStyle=color;ctx.lineWidth=Math.max(1.8,t*.15);ctx.shadowColor=color;ctx.shadowBlur=Math.max(3,t*.15);ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();ctx.shadowBlur=0;
+    if(t>=15){ctx.fillStyle='#39263a';ctx.strokeStyle='#fff2cd';ctx.lineWidth=t*.028;ctx.beginPath();ctx.arc((x1+x2)/2,(y1+y2)/2,t*.125,0,Math.PI*2);ctx.fill();ctx.stroke();
+    ctx.fillStyle='#fff6da';ctx.font=`900 ${Math.max(9,t*.15)}px Nunito`;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(String(door.id+1),(x1+x2)/2,(y1+y2)/2+1);}
   }
   ctx.restore();
 }
+// A sprite pode deslizar entre duas células; a posição real e a lógica permanecem na grade.
+function spritePosition(now){
+  const f=Math.min(1,Math.max(0,(now-spriteStart)/125));
+  const e=1-(1-f)*(1-f);
+  return {x:spriteFrom.x+(player.x-spriteFrom.x)*e,y:spriteFrom.y+(player.y-spriteFrom.y)*e};
+}
 function draw(){
   if(!maze)return;
-  let cw=canvas.clientWidth;if(!cw)return;
-  let dpr=Math.min(window.devicePixelRatio||1,2);let physical=Math.round(cw*dpr);
+  const cw=canvas.clientWidth;if(!cw)return;
+  const dpr=Math.min(window.devicePixelRatio||1,2),physical=Math.round(cw*dpr);
   if(canvas.width!==physical||canvas.height!==physical){canvas.width=physical;canvas.height=physical}
   ctx.setTransform(dpr,0,0,dpr,0,0);
-  const t=cw/VIEW,ox=VIEW/2-player.x-.5,oy=VIEW/2-player.y-.5;
+  const t=cw/maze.n;
   ctx.fillStyle=theme==='ghost'?'#090f20':'#10182c';ctx.fillRect(0,0,cw,cw);
-  // Ambient dust in the darkness: atmosphere only, never revealing a hidden wall or passage.
-  for(let fy=0;fy<VIEW;fy++)for(let fx=0;fx<VIEW;fx++){
-    const h=hash(fx,fy,31),x=(fx+.14+hash(fx,fy,32)*.72)*t,y=(fy+.12+hash(fx,fy,33)*.76)*t;
-    if(h>.46){ctx.fillStyle=theme==='ghost'?'#6d88bd1b':'#a88ccc1c';ctx.beginPath();ctx.arc(x,y,t*(.007+h*.014),0,Math.PI*2);ctx.fill()}
-    if(h>.9){ctx.strokeStyle=theme==='ghost'?'#9cb9d817':'#f0c6e019';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(x-t*.05,y);ctx.lineTo(x+t*.05,y);ctx.moveTo(x,y-t*.05);ctx.lineTo(x,y+t*.05);ctx.stroke()}
+
+  // Quadrículas apenas decorativas no desconhecido: não mostram paredes ou corredores.
+  if(t>=7){
+    ctx.save();ctx.strokeStyle=theme==='ghost'?'#9cafd20c':'#bfa1cf0e';ctx.lineWidth=.55;
+    ctx.beginPath();for(let i=1;i<maze.n;i++){let a=i*t;ctx.moveTo(a,0);ctx.lineTo(a,cw);ctx.moveTo(0,a);ctx.lineTo(cw,a)}ctx.stroke();ctx.restore();
   }
-  const visible=new Uint8Array(maze.n*maze.n),minX=Math.max(0,Math.floor(player.x-6)),maxX=Math.min(maze.n-1,Math.ceil(player.x+6)),minY=Math.max(0,Math.floor(player.y-6)),maxY=Math.min(maze.n-1,Math.ceil(player.y+6));
+  // O fundo e todas as células estão presos às coordenadas do mapa (sem câmera móvel).
+  for(let fy=0;fy<11;fy++)for(let fx=0;fx<11;fx++){
+    const h=hash(fx,fy,31),x=(fx+.14+hash(fx,fy,32)*.72)*cw/11,y=(fy+.12+hash(fx,fy,33)*.76)*cw/11;
+    if(h>.46){ctx.fillStyle=theme==='ghost'?'#6d88bd15':'#a88ccc17';ctx.beginPath();ctx.arc(x,y,Math.max(.5,cw*(.0007+h*.0012)),0,Math.PI*2);ctx.fill()}
+  }
+  const visible=new Uint8Array(maze.n*maze.n),r=Math.ceil(sightRadius()+1);
+  const minX=Math.max(0,player.x-r),maxX=Math.min(maze.n-1,player.x+r);
+  const minY=Math.max(0,player.y-r),maxY=Math.min(maze.n-1,player.y+r);
   for(let y=minY;y<=maxY;y++)for(let x=minX;x<=maxX;x++){
     if(!isVisible(x,y))continue;
     let i=idOf(x,y,maze.n);visible[i]=1;
-    floorTile(x,y,(x+ox)*t,(y+oy)*t,t,Math.hypot(player.x-x,player.y-y));
+    floorTile(x,y,x*t,y*t,t,Math.hypot(player.x-x,player.y-y));
   }
-  ctx.save();
+
   for(let y=minY;y<=maxY;y++)for(let x=minX;x<=maxX;x++){
     let idx=idOf(x,y,maze.n);if(!visible[idx])continue;
-    let sx=(x+ox)*t,sy=(y+oy)*t,mask=maze.walls[idx];
+    let sx=x*t,sy=y*t,mask=maze.walls[idx];
     if(mask&N)drawWall(sx,sy,sx+t,sy,t);
     if(mask&E)drawWall(sx+t,sy,sx+t,sy+t,t);
     if(mask&S)drawWall(sx,sy+t,sx+t,sy+t,t);
     if(mask&W)drawWall(sx,sy,sx,sy+t,t);
   }
   for(let door of maze.doors)drawDoor(door,t,visible,animClock);
-  for(let k of maze.keys){if(keysMask&(1<<k.id)||!visible[k.at])continue;let p=xyOf(k.at,maze.n);drawKey((p.x+ox+.5)*t,(p.y+oy+.5)*t,t,COLORS[k.id],animClock)}
-  if(visible[maze.n*maze.n-1])drawExit((maze.n-1+ox+.5)*t,(maze.n-1+oy+.5)*t,t,animClock);
-  ctx.restore();
-  let center=cw/2;
-  ctx.save();ctx.globalAlpha=.3;ctx.fillStyle=theme==='ghost'?'#9edffd':'#ffc9e9';ctx.beginPath();ctx.ellipse(center,center+t*.18,t*.25,t*.11,0,0,Math.PI*2);ctx.fill();ctx.restore();
-  if(theme==='ghost')drawGhost(center,center,t,player.dir,animClock);else drawUnicorn(center,center,t,player.dir,animClock);
-  // Optional hint points to only the next legal step, never reveals the map.
-  if(hintDirection>=0){let a=[-Math.PI/2,0,Math.PI/2,Math.PI][hintDirection],px=center+Math.cos(a)*t*.72,py=center+Math.sin(a)*t*.72;
-    ctx.save();ctx.translate(px,py);ctx.rotate(a+Math.PI/2);ctx.fillStyle='#ffe69c';ctx.shadowColor='#ffd480';ctx.shadowBlur=t*.2;ctx.beginPath();ctx.moveTo(0,-t*.16);ctx.lineTo(t*.11,t*.04);ctx.lineTo(-t*.11,t*.04);ctx.closePath();ctx.fill();ctx.restore()}
-  let g=ctx.createRadialGradient(center,center,cw*.18,center,center,cw*.75);g.addColorStop(0,'#02071500');g.addColorStop(1,'#0508167f');ctx.fillStyle=g;ctx.fillRect(0,0,cw,cw);
+  for(let k of maze.keys){if(keysMask&(1<<k.id)||!visible[k.at])continue;
+    let p=xyOf(k.at,maze.n);drawKey((p.x+.5)*t,(p.y+.5)*t,t,COLORS[k.id],animClock)}
+  if(visible[maze.n*maze.n-1])drawExit((maze.n-.5)*t,(maze.n-.5)*t,t,animClock);
+
+  // Indicador sutil de direção acompanha o personagem, sem revelar obstáculos.
+  const pos=spritePosition(performance.now()),cx=(pos.x+.5)*t,cy=(pos.y+.5)*t;
+  const avatarSize=Math.max(t*.92,maze.n>=40?16:13);
+  ctx.save();
+  const aura=ctx.createRadialGradient(cx,cy,0,cx,cy,Math.max(avatarSize*.95,t*2.0));
+  if(theme==='ghost'){aura.addColorStop(0,'#a4e6ff59');aura.addColorStop(1,'#a4e6ff00')}
+  else{aura.addColorStop(0,'#ffd2f27c');aura.addColorStop(1,'#ffd2f200')}
+  ctx.fillStyle=aura;ctx.beginPath();ctx.arc(cx,cy,Math.max(avatarSize*.95,t*2),0,Math.PI*2);ctx.fill();
+  ctx.fillStyle=theme==='ghost'?'#d9f9ff':'#ffe6f9';ctx.globalAlpha=.7;
+  ctx.beginPath();ctx.arc(cx,cy,Math.min(t*.25,3.2),0,Math.PI*2);ctx.fill();ctx.restore();
+  if(theme==='ghost')drawGhost(cx,cy,avatarSize,player.dir,animClock);
+  else drawUnicorn(cx,cy,avatarSize,player.dir,animClock);
+  if(hintDirection>=0){let a=[-Math.PI/2,0,Math.PI/2,Math.PI][hintDirection];
+    const px=cx+Math.cos(a)*Math.max(avatarSize*.88,t*.77),py=cy+Math.sin(a)*Math.max(avatarSize*.88,t*.77);
+    ctx.save();ctx.translate(px,py);ctx.rotate(a+Math.PI/2);ctx.fillStyle='#ffe69c';ctx.shadowColor='#ffd480';ctx.shadowBlur=5;
+    ctx.beginPath();ctx.moveTo(0,-4);ctx.lineTo(3.5,2);ctx.lineTo(-3.5,2);ctx.closePath();ctx.fill();ctx.restore();
+  }
+  // A borda permanece fixa, inclusive nos mapas grandes.
+  ctx.strokeStyle=theme==='ghost'?'#6780a155':'#81d9d355';ctx.lineWidth=2;
+  ctx.strokeRect(1,1,cw-2,cw-2);
 }
 let previousFrame=0;
 function animate(time){if(time-previousFrame>=42){animClock=time;draw();previousFrame=time}requestAnimationFrame(animate)}
@@ -505,13 +548,13 @@ document.querySelectorAll('.arrow-btn').forEach(b=>{
 let touchStart=null;
 canvas.addEventListener('pointerdown',e=>{if(e.pointerType==='mouse'&&e.button!==0)return;touchStart={x:e.clientX,y:e.clientY};canvas.setPointerCapture?.(e.pointerId)});
 canvas.addEventListener('pointerup',e=>{if(!touchStart)return;const dx=e.clientX-touchStart.x,dy=e.clientY-touchStart.y;touchStart=null;
-  if(Math.max(Math.abs(dx),Math.abs(dy))<16){let r=canvas.getBoundingClientRect();let x=e.clientX-r.left-r.width/2,y=e.clientY-r.top-r.height/2; if(Math.max(Math.abs(x),Math.abs(y))<r.width*.1)return;tryMove(Math.abs(x)>Math.abs(y)?(x>0?1:3):(y>0?2:0));return}
+  if(Math.max(Math.abs(dx),Math.abs(dy))<16){let r=canvas.getBoundingClientRect();let x=e.clientX-r.left-(player.x+.5)*r.width/maze.n,y=e.clientY-r.top-(player.y+.5)*r.height/maze.n; if(Math.max(Math.abs(x),Math.abs(y))<r.width/maze.n*.55)return;tryMove(Math.abs(x)>Math.abs(y)?(x>0?1:3):(y>0?2:0));return}
   tryMove(Math.abs(dx)>Math.abs(dy)?(dx>0?1:3):(dy>0?2:0));
 });
 canvas.addEventListener('pointercancel',()=>touchStart=null);
 window.addEventListener('blur',stopPad);
 // Programmatic check: each freshly generated map is solved with a key-inventory BFS.
-window.__mazeLabTest={buildMap,validate,findPath,getState:()=>({maze,player:{...player},keysMask,openedMask,won,steps}),move:tryMove};
+window.__mazeLabTest={buildMap,validate,findPath,isVisible,getState:()=>({maze,player:{...player},keysMask,openedMask,won,steps}),move:tryMove};
 startGame();requestAnimationFrame(animate);
 setInterval(tick,1000);
 })();
