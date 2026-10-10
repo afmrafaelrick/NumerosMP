@@ -102,7 +102,7 @@
   </header>
   <main class="layout">
     <section class="board-card" aria-label="Área do labirinto">
-      <div class="board-head"><div class="map-label"><i></i><span id="mapLabel">Aventura medieval</span></div><span id="boardSize" class="board-size">20 × 20</span></div>
+      <div class="board-head"><div class="map-label"><i></i><span id="mapLabel">Aventura medieval</span></div><span id="boardSize" class="board-size">10 × 10</span></div>
       <div class="board-wrap" id="boardWrap">
         <canvas id="mazeCanvas" aria-label="Labirinto. Use as setas do teclado ou os botões direcionais para movimentar o personagem."></canvas>
         <div id="hintBubble" class="hint-bubble hidden" role="status"></div>
@@ -120,9 +120,9 @@
         </div>
         <div class="field"><div class="choice-label">Tamanho do labirinto</div>
           <div class="segment levels" role="group" aria-label="Dificuldades">
-            <button type="button" class="seg-btn active" data-size="20" aria-pressed="true">Fácil<small>20 × 20</small></button>
-            <button type="button" class="seg-btn" data-size="40" aria-pressed="false">Médio<small>40 × 40</small></button>
-            <button type="button" class="seg-btn" data-size="60" aria-pressed="false">Difícil<small>60 × 60</small></button>
+            <button type="button" class="seg-btn active" data-size="10" aria-pressed="true">Fácil<small>10 × 10</small></button>
+            <button type="button" class="seg-btn" data-size="20" aria-pressed="false">Médio<small>20 × 20</small></button>
+            <button type="button" class="seg-btn" data-size="30" aria-pressed="false">Difícil<small>30 × 30</small></button>
           </div>
         </div>
         <div class="field"><button type="button" id="newGame" class="primary"><span>✦</span> Criar novo labirinto <span>↗</span></button></div>
@@ -157,7 +157,7 @@ const N=1,E=2,S=4,W=8;
 const DIR=[{dx:0,dy:-1,bit:N,op:S},{dx:1,dy:0,bit:E,op:W},{dx:0,dy:1,bit:S,op:N},{dx:-1,dy:0,bit:W,op:E}];
 const COLORS=['#ffd06d','#69e0ef','#ef9ccf','#9de99e'];
 const canvas=document.getElementById('mazeCanvas'),ctx=canvas.getContext('2d',{alpha:false}),wrap=document.getElementById('boardWrap');
-let selectedSize=20,theme='ghost',maze=null,player=null,steps=0,keysMask=0,openedMask=0,won=false,elapsed=0,startTime=0,winTime=0;
+let selectedSize=10,theme='ghost',maze=null,player=null,steps=0,keysMask=0,openedMask=0,won=false,elapsed=0,startTime=0,winTime=0;
 let sound=false,audioContext=null,toastTimer=0,hintTimer=0,hintDirection=-1,modalMode='win',animClock=0;
 let spriteFrom={x:0,y:0},spriteStart=0;
 const $=id=>document.getElementById(id);
@@ -209,7 +209,7 @@ function setGatesAndKeys(m,doorCount){
   while(head<tail){let at=q[head++];for(let {to} of neighborsOpen(m,at)){if(owner[to]!==-1)continue;owner[to]=owner[at];depth[to]=depth[at]+1;q[tail++]=to}}
   for(let i=0;i<doorCount;i++){
     let lo=i===0?0:gatePositions[i-1],hi=gatePositions[i]-1;
-    let maxBranch=m.n===20?9:m.n===40?13:16;
+    let maxBranch=m.n===10?5:m.n===20?9:12;
     let candidates=[];
     for(let cell=0;cell<owner.length;cell++){
       let pi=owner[cell],dist=depth[cell];
@@ -246,10 +246,10 @@ function validate(m){
   return false;
 }
 function buildMap(n){
-  const count=n===20?1:n===40?2:4;
+  const count=n===10?1:n===20?2:4;
   for(let attempt=0;attempt<25;attempt++){
     let m=generateTree(n);let naturalPath=findPath(m,startOf(n),n*n-1,15,true);
-    let minimum=n===20?65:n===40?205:450;
+    let minimum=n===10?20:n===20?75:135;
     if(naturalPath.length<minimum&&attempt<19)continue;
     if(!setGatesAndKeys(m,count))continue;
     if(validate(m))return m;
@@ -290,7 +290,7 @@ function startGame(){
   const start=xyOf(startOf(maze.n),maze.n);
   player={x:start.x,y:start.y,dir:firstFacing(maze)};spriteFrom={...start};spriteStart=0;steps=0;keysMask=0;openedMask=0;won=false;startTime=Date.now();elapsed=0;
   $('boardSize').textContent=`${selectedSize} × ${selectedSize}`;
-  $('levelTag').textContent=selectedSize===20?'Nível fácil • 1 porta':selectedSize===40?'Nível médio • 2 portas':'Nível difícil • 4 portas';
+  $('levelTag').textContent=selectedSize===10?'Nível fácil • 1 porta':selectedSize===20?'Nível médio • 2 portas':'Nível difícil • 4 portas';
   $('validationPill').innerHTML='<span class="dot"></span> Mapa testado ✓';
   hintDirection=-1;$('hintBubble').classList.add('hidden');clearTimeout(hintTimer);$('modal').hidden=true;
   refreshStats();toast('✨ Encontre as chaves e saia do labirinto!',2200);draw();
@@ -349,16 +349,20 @@ function rayClear(ax,ay,bx,by){
       let door=maze.doorEdges.get(edgeKey(at,idOf(x,y+stepY,maze.n)));if(door!==undefined&&!(openedMask&(1<<door)))return false;
       y+=stepY;ty+=incY;
     }else{
-      if(stepX&&maze.walls[at]&DIR[stepX>0?1:3].bit)return false;
-      if(stepY&&maze.walls[at]&DIR[stepY>0?2:0].bit)return false;
-      if(stepX){let door=maze.doorEdges.get(edgeKey(at,idOf(x+stepX,y,maze.n)));if(door!==undefined&&!(openedMask&(1<<door)))return false}
-      if(stepY){let door=maze.doorEdges.get(edgeKey(at,idOf(x,y+stepY,maze.n)));if(door!==undefined&&!(openedMask&(1<<door)))return false}
+      // Uma diagonal na quina só é transparente se existir ao menos uma passagem
+      // de dois trechos desobstruídos ao redor dessa quina.
+      const horiz=stepX>0?1:3,vert=stepY>0?2:0;
+      const cellX=idOf(x+stepX,y,maze.n),cellY=idOf(x,y+stepY,maze.n),diag=idOf(x+stepX,y+stepY,maze.n);
+      const open=(a,b,d)=>!(maze.walls[a]&DIR[d].bit)&&
+        (maze.doorEdges.get(edgeKey(a,b))===undefined||!!(openedMask&(1<<maze.doorEdges.get(edgeKey(a,b)))));
+      if(!((open(at,cellX,horiz)&&open(cellX,diag,vert))||
+           (open(at,cellY,vert)&&open(cellY,diag,horiz))))return false;
       x+=stepX;y+=stepY;tx+=incX;ty+=incY;
     }
   }
   return x===bx&&y===by;
 }
-function sightRadius(){return maze.n===20?6.25:maze.n===40?8.5:11.5}
+function sightRadius(){return maze.n===10?4.8:maze.n===20?5.7:7.2}
 function isVisible(x,y){
   if(x<0||y<0||x>=maze.n||y>=maze.n)return false;
   let dx=x-player.x,dy=y-player.y,dist=Math.hypot(dx,dy);
@@ -373,7 +377,7 @@ function roundedRect(c,x,y,w,h,r){c.beginPath();c.roundRect(x,y,w,h,r)}
 function floorTile(x,y,sx,sy,t,dist){
   let isUnicorn=theme==='unicorn',v=hash(x,y),c=isUnicorn?(v>.64?'#274e54':v>.30?'#244247':'#223e48'):(v>.65?'#29334a':v>.33?'#273047':'#242b40');
   ctx.fillStyle=c;ctx.fillRect(sx,sy,t+.7,t+.7);
-  if(t<10)return; // Em tabuleiros grandes, detalhes de poucos pixels não poluem o desenho.
+  if(t<10)return; // Os detalhes pequenos não poluem o desenho.
   if(isUnicorn){
     if(hash(x,y,3)>.42){ctx.fillStyle='#48746966';ctx.beginPath();ctx.ellipse(sx+t*.35,sy+t*.63,t*.19,t*.1,-.3,0,Math.PI*2);ctx.fill()}
     if(hash(x,y,7)>.72){let px=sx+t*.72,py=sy+t*.32;ctx.fillStyle='#ffd2f2b0';for(let i=0;i<5;i++){let a=i*Math.PI*2/5;ctx.beginPath();ctx.arc(px+Math.cos(a)*t*.043,py+Math.sin(a)*t*.043,t*.033,0,Math.PI*2);ctx.fill()}ctx.fillStyle='#ffe17c';ctx.beginPath();ctx.arc(px,py,t*.027,0,Math.PI*2);ctx.fill()}
@@ -392,7 +396,7 @@ function drawWall(x1,y1,x2,y2,t){
   ctx.strokeStyle=theme==='ghost'?'#acb6ce55':'#a1dfc45d';ctx.lineWidth=Math.max(1,t*.021);ctx.beginPath();ctx.moveTo(x1,y1-t*.037);ctx.lineTo(x2,y2-t*.037);ctx.stroke();
 }
 function drawKey(cx,cy,t,color,clock){
-  if(t<13){ // Gema luminosa nítida mesmo num labirinto de 60×60.
+  if(t<13){ // Gema luminosa nítida mesmo no labirinto maior.
     ctx.save();ctx.shadowColor=color;ctx.shadowBlur=8;ctx.fillStyle=color;
     ctx.beginPath();ctx.arc(cx,cy,Math.max(3.2,t*.42),0,Math.PI*2);ctx.fill();
     ctx.shadowBlur=0;ctx.fillStyle='#fff9ed';ctx.beginPath();ctx.arc(cx,cy,1.4,0,Math.PI*2);ctx.fill();ctx.restore();return;
@@ -443,6 +447,8 @@ function drawDoor(door,t,visible,clock){
   let x1=vertical?x:x+t*.18,y1=vertical?y+t*.18:y;
   let x2=vertical?x:x+t*.82,y2=vertical?y+t*.82:y;
   let color=COLORS[door.id],open=Boolean(openedMask&(1<<door.id));
+  // Uma porta já aberta não desenha um segmento solto dentro da escuridão.
+  if(open&&(!visible[door.from]||!visible[door.to]))return;
   ctx.save();ctx.lineCap='round';
   if(open){ctx.strokeStyle=color+'70';ctx.lineWidth=t*.055;ctx.setLineDash([t*.07,t*.08]);ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();ctx.setLineDash([])}
   else{
@@ -481,9 +487,26 @@ function draw(){
   const visible=new Uint8Array(maze.n*maze.n),r=Math.ceil(sightRadius()+1);
   const minX=Math.max(0,player.x-r),maxX=Math.min(maze.n-1,player.x+r);
   const minY=Math.max(0,player.y-r),maxY=Math.min(maze.n-1,player.y+r);
+  // Primeiro identifica os quadrados que poderiam ser vistos pelo raio de luz.
+  // Depois, mantém SOMENTE a porção ligada ao personagem por passagens abertas.
+  // Isso elimina paredes soltas iluminadas através de quinas e de portas fechadas.
+  const candidates=new Uint8Array(maze.n*maze.n);
   for(let y=minY;y<=maxY;y++)for(let x=minX;x<=maxX;x++){
-    if(!isVisible(x,y))continue;
-    let i=idOf(x,y,maze.n);visible[i]=1;
+    if(isVisible(x,y))candidates[idOf(x,y,maze.n)]=1;
+  }
+  const start=idOf(player.x,player.y,maze.n);
+  const queue=[start];visible[start]=1;
+  for(let q=0;q<queue.length;q++){
+    const at=queue[q];
+    for(const {to} of neighborsOpen(maze,at)){
+      if(!candidates[to]||visible[to])continue;
+      const door=maze.doorEdges.get(edgeKey(at,to));
+      if(door!==undefined&&!(openedMask&(1<<door)))continue;
+      visible[to]=1;queue.push(to);
+    }
+  }
+  for(const cell of queue){
+    const x=cell%maze.n,y=Math.floor(cell/maze.n);
     floorTile(x,y,x*t,y*t,t,Math.hypot(player.x-x,player.y-y));
   }
 
@@ -502,7 +525,7 @@ function draw(){
 
   // Indicador sutil de direção acompanha o personagem, sem revelar obstáculos.
   const pos=spritePosition(performance.now()),cx=(pos.x+.5)*t,cy=(pos.y+.5)*t;
-  const avatarSize=Math.max(t*.92,maze.n>=40?16:13);
+  const avatarSize=Math.max(t*.84,maze.n===30?13:14);
   ctx.save();
   const aura=ctx.createRadialGradient(cx,cy,0,cx,cy,Math.max(avatarSize*.95,t*2.0));
   if(theme==='ghost'){aura.addColorStop(0,'#a4e6ff59');aura.addColorStop(1,'#a4e6ff00')}
@@ -517,7 +540,7 @@ function draw(){
     ctx.save();ctx.translate(px,py);ctx.rotate(a+Math.PI/2);ctx.fillStyle='#ffe69c';ctx.shadowColor='#ffd480';ctx.shadowBlur=5;
     ctx.beginPath();ctx.moveTo(0,-4);ctx.lineTo(3.5,2);ctx.lineTo(-3.5,2);ctx.closePath();ctx.fill();ctx.restore();
   }
-  // A borda permanece fixa, inclusive nos mapas grandes.
+  // A borda permanece fixa, inclusive nos mapas maiores.
   ctx.strokeStyle=theme==='ghost'?'#6780a155':'#81d9d355';ctx.lineWidth=2;
   ctx.strokeRect(1,1,cw-2,cw-2);
 }
@@ -546,7 +569,7 @@ document.querySelectorAll('.arrow-btn').forEach(b=>{
   b.addEventListener('pointerup',stopPad);b.addEventListener('pointercancel',stopPad);b.addEventListener('lostpointercapture',stopPad);
 });
 let touchStart=null;
-canvas.addEventListener('pointerdown',e=>{if(e.pointerType==='mouse'&&e.button!==0)return;touchStart={x:e.clientX,y:e.clientY};canvas.setPointerCapture?.(e.pointerId)});
+canvas.addEventListener('pointerdown',e=>{if(!maze||won||e.pointerType==='mouse'&&e.button!==0)return;touchStart={x:e.clientX,y:e.clientY};canvas.setPointerCapture?.(e.pointerId)});
 canvas.addEventListener('pointerup',e=>{if(!touchStart)return;const dx=e.clientX-touchStart.x,dy=e.clientY-touchStart.y;touchStart=null;
   if(Math.max(Math.abs(dx),Math.abs(dy))<16){let r=canvas.getBoundingClientRect();let x=e.clientX-r.left-(player.x+.5)*r.width/maze.n,y=e.clientY-r.top-(player.y+.5)*r.height/maze.n; if(Math.max(Math.abs(x),Math.abs(y))<r.width/maze.n*.55)return;tryMove(Math.abs(x)>Math.abs(y)?(x>0?1:3):(y>0?2:0));return}
   tryMove(Math.abs(dx)>Math.abs(dy)?(dx>0?1:3):(dy>0?2:0));
@@ -554,7 +577,7 @@ canvas.addEventListener('pointerup',e=>{if(!touchStart)return;const dx=e.clientX
 canvas.addEventListener('pointercancel',()=>touchStart=null);
 window.addEventListener('blur',stopPad);
 // Programmatic check: each freshly generated map is solved with a key-inventory BFS.
-window.__mazeLabTest={buildMap,validate,findPath,isVisible,getState:()=>({maze,player:{...player},keysMask,openedMask,won,steps}),move:tryMove};
+window.__mazeLabTest={buildMap,validate,findPath,isVisible,neighbor,neighborsOpen,startOf,getState:()=>({maze,player:{...player},keysMask,openedMask,won,steps}),move:tryMove};
 startGame();requestAnimationFrame(animate);
 setInterval(tick,1000);
 })();
